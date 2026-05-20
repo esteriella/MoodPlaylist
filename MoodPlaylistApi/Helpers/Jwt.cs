@@ -6,6 +6,7 @@
         public string? Issuer { get; set; }
         public string? Audience { get; set; }
         public int MaxAge { get; set; } = 10; // Default value in case it's missing
+        public int MaxRefreshAge { get; set; } = 20; // Default value in case it's missing
     }
 
     public class JwtSettingsHelper
@@ -14,6 +15,7 @@
         public static string Issuer { get; private set; } = string.Empty;
         public static string Audience { get; private set; } = string.Empty;
         public static int MaxAge { get; private set; }
+        public static int MaxRefreshAge { get; private set; }
 
         public static void JwtConfigure(IConfiguration configuration)
         {
@@ -38,6 +40,11 @@
                 ? jwtSettings.MaxAge
                 : throw new ArgumentException("JWT MaxAge must be greater than 0.",
                     nameof(jwtSettings.MaxAge));
+
+            MaxRefreshAge = jwtSettings?.MaxRefreshAge > 0
+                ? jwtSettings.MaxRefreshAge
+                : throw new ArgumentException("JWT MaxRefreshAge must be greater than 0.",
+                    nameof(jwtSettings.MaxRefreshAge));
         }
     }
 

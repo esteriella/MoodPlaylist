@@ -5,17 +5,17 @@ using MoodPlaylistApi.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace MoodPlaylistApi.Middleware
+namespace MoodPlaylistApi.Middlewares
 {
     public class AuthMiddleware(RequestDelegate next)
     {
         public async Task Invoke(HttpContext context, AppDbContext dc)
         {
             // We want to extract user Id context to use and fetch the user email to now attach to claims for use in controllers.
-            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
             if (authHeader != null && authHeader.StartsWith("Bearer "))
             {
-                var token = authHeader.Substring("Bearer ".Length).Trim();
+                var token = authHeader["Bearer ".Length..].Trim();
                 var handler = new JwtSecurityTokenHandler();
 
                 try

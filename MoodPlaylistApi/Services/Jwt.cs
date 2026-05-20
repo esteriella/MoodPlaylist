@@ -60,7 +60,7 @@ namespace MoodPlaylistApi.Services
             rng.GetBytes(randomBytes);
 
             var refreshToken = Convert.ToBase64String(randomBytes);
-            var expiry = DateTime.UtcNow.AddDays(7);
+            var expiry = DateTime.UtcNow.AddHours(JwtSettingsHelper.MaxRefreshAge);
 
             return (refreshToken, expiry);
         }

@@ -1,6 +1,6 @@
 ﻿using MoodPlaylistApi.Exceptions;
 
-namespace MoodPlaylistApi.Middleware
+namespace MoodPlaylistApi.Middlewares
 {
     public class ExceptionMiddleware(
         ILogger<ExceptionMiddleware> logger,

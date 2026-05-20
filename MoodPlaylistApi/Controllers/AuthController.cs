@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MoodPlaylistApi.Interfaces;
 
 namespace MoodPlaylistApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    [Route("api/auth")]
+    public class AuthController(IUnitOfWork uow) : ControllerBase
     {
         [HttpGet("callback")]
         public IActionResult Callback([FromQuery] string code, [FromQuery] string state)
@@ -17,6 +18,8 @@ namespace MoodPlaylistApi.Controllers
 
             return Ok(new { message = "Authorization successful", code });
         }
+
+
     }
 
 }

@@ -8,10 +8,10 @@ namespace MoodPlaylistApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PlaylistsController(AppDbContext context, Spotify spotify) : ControllerBase
+    public class PlaylistsController(AppDbContext context, ISpotifyService spotify) : ControllerBase
     {
         private readonly AppDbContext _context = context;
-        private readonly Spotify _spotify = spotify;
+        private readonly ISpotifyService _spotify = spotify;
 
         // POST /api/playlists
         [HttpPost]
@@ -21,13 +21,13 @@ namespace MoodPlaylistApi.Controllers
             if (mood == null) return NotFound("Mood not found");
 
             // Call Spotify API to get tracks for this mood
-            var spotifyTracksJson = await _spotify.GetTracksForMood(mood.Name, "<your-access-token>");
+            var spotifyTracksJson = await _spotify.GetTracksForMood(mood.Name);
 
             var playlist = new Playlist
             {
                 Title = $"{mood.Name} Vibes",
                 MoodId = mood.Id,
-                TracksJson = spotifyTracksJson,
+                Tracks = spotifyTracksJson,
                 // satisfy required navigation/property initializers
                 Mood = mood,
                 // If you don't have a User to assign here, use null-forgiving to satisfy the compiler.

@@ -1,29 +1,44 @@
-﻿using System.Net.Http.Headers;
+﻿using MoodPlaylistApi.Exceptions;
+using System.Text.Json;
 
 namespace MoodPlaylistApi.Services
 {
-    public class Spotify(HttpClient httpClient)
+    public interface ISpotifyService
+    {
+        Task<string> GetTracksForMood(string moodName);
+        Task<string> GetTrackById(string trackId);
+    }
+
+    public sealed class SpotifyService(HttpClient httpClient) : ISpotifyService
     {
         private readonly HttpClient _httpClient = httpClient;
 
-        public async Task<string> GetTracksForMood(string moodName, string token)
+        public async Task<string> GetTracksForMood(string moodName)
         {
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
 
             var response = await _httpClient.GetAsync(
-                $"https://api.spotify.com/v1/search?q={moodName}&type=track&limit=10"
+                $"v1/search?q={moodName}&type=track&limit=10" 
             );
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new SpotifyApiException(
+                     $"Failed.\n Content\n:{JsonSerializer.Serialize(response.Content)}");
+            }
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string?> GetTrackById(string trackId, string token)
+        public async Task<string> GetTrackById(string trackId)
         {
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
 
-            var response = await _httpClient.GetAsync($"https://api.spotify.com/v1/tracks/{trackId}");
-            if (!response.IsSuccessStatusCode) return null;
+            var response = await _httpClient.GetAsync($"v1/tracks/{trackId}");
+            if (!response.IsSuccessStatusCode)
+            {
+                if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    throw new TrackNotFoundException(trackId);
+
+                throw new SpotifyApiException(
+                     $"Failed.\n Content\n:{JsonSerializer.Serialize(response.Content)}");
+            }
 
             return await response.Content.ReadAsStringAsync();
         }

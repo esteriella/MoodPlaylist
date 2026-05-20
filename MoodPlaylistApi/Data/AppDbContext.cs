@@ -13,16 +13,9 @@ namespace MoodPlaylistApi.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Relationships
-            modelBuilder.Entity<Playlist>()
-                .HasOne(p => p.Mood)
-                .WithMany(m => m.Playlists)
-                .HasForeignKey(p => p.MoodId);
-
-            modelBuilder.Entity<Playlist>()
-                .HasOne(p => p.User)
-                .WithMany(u => u.Playlists)
-                .HasForeignKey(p => p.UserId);
+            Mood.Init(modelBuilder);
+            User.Init(modelBuilder);
+            Playlist.Init(modelBuilder);
         }
     }
 }

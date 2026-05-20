@@ -12,7 +12,7 @@ namespace MoodPlaylistApi.Startup
             if (string.IsNullOrWhiteSpace(baseAddress)) throw new ArgumentException("Spotify base url is required");
             if (string.IsNullOrWhiteSpace(clientSecret)) throw new ArgumentException("Spotify client secret is required");
 
-            builder.Services.AddHttpClient<Spotify>(client =>
+            builder.Services.AddHttpClient<ISpotifyService, SpotifyService>(client =>
             {
                 client.BaseAddress = new Uri(baseAddress);
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", clientSecret);

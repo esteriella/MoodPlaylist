@@ -10,6 +10,9 @@
     public class MoodNotFoundException(Guid moodId) : MoodPlaylistException($"Mood with ID {moodId} was not found.")
     {
     }
+    public class TrackNotFoundException(string trackId) : MoodPlaylistException($"Track with ID {trackId} was not found.")
+    {
+    }
 
     public class SpotifyApiException(string message, Exception? inner = null) : MoodPlaylistException(message, inner)
     {
