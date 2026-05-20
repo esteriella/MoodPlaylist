@@ -6,7 +6,7 @@ namespace MoodPlaylistApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class MoodsController(AppDbContext context) : ControllerBase
+    public class MoodController(AppDbContext context) : ControllerBase
     {
         private readonly AppDbContext _context = context;
 

@@ -8,7 +8,7 @@ namespace MoodPlaylistApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PlaylistsController(AppDbContext context, ISpotifyService spotify) : ControllerBase
+    public class PlaylistController(AppDbContext context, ISpotifyService spotify) : ControllerBase
     {
         private readonly AppDbContext _context = context;
         private readonly ISpotifyService _spotify = spotify;
