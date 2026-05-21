@@ -10,6 +10,12 @@
     public class MoodNotFoundException(Guid moodId) : MoodPlaylistException($"Mood with ID {moodId} was not found.")
     {
     }
+
+    // Specific exception types
+    public class MoodGenreNotValidException(string message) : MoodPlaylistException(message)
+    {
+    }
+
     public class TrackNotFoundException(string trackId) : MoodPlaylistException($"Track with ID {trackId} was not found.")
     {
     }

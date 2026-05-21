@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using MoodPlaylistApi.Dtos;
 using MoodPlaylistApi.Models;
 
 namespace MoodPlaylistApi.Data

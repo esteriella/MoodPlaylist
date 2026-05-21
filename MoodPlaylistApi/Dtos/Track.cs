@@ -2,7 +2,13 @@
 
 namespace MoodPlaylistApi.Dtos
 {
-    public sealed record Track
+    public sealed record SpotifyRecommendationsResponse
+    {
+        [JsonPropertyName("tracks")]
+        public List<Track> Tracks { get; set; } = [];
+    }
+
+    public sealed record Track 
     {
         [JsonPropertyName("href")]
         public string HRef { get; set; } = string.Empty;
