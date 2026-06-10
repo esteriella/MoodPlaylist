@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MoodPlaylistApi.Dtos.Auth;
 using MoodPlaylistApi.Interfaces;
 
 namespace MoodPlaylistApi.Controllers
 {
-    [ApiController]
-    [Route("api/auth")]
-    public class AuthController(IUnitOfWork uow) : ControllerBase
+    [Route("auth")]
+    public class AuthController(IUnitOfWork uow) : BaseController
     {
 
         //[HttpGet("callback")]
@@ -33,6 +33,16 @@ namespace MoodPlaylistApi.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var result = await uow.AuthRepository.LoginAsync(dto);
+
+            return StatusCode((int)result.StatusCode, result);
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            Guid userId = Guid.Parse(GetUserId());
+            var result = await uow.AuthRepository.LogoutAsync(userId);
 
             return StatusCode((int)result.StatusCode, result);
         }

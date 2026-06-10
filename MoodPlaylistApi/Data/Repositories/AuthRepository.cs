@@ -84,6 +84,20 @@ namespace MoodPlaylistApi.Data.Repositories
             });
         }
 
+        public async Task<ApiResponse<string>> LogoutAsync(Guid userId)
+        {
+            var user = await dc.Users.FindAsync(userId);
+            if (user is null)
+            {
+                return ApiResponse<string>.Error(HttpStatusCode.Unauthorized, "You are not authorized.");
+            }
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+            dc.Users.Update(user);
+            await dc.SaveChangesAsync();
+            return ApiResponse<string>.Success(HttpStatusCode.OK, "User logged out successfully.");
+        }
+
         private static string HashString(string rawKey)
         {
             var secret = Encoding.UTF8.GetBytes(HashHelperSettings.SecretKey);

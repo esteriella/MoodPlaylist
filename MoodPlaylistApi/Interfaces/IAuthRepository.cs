@@ -7,5 +7,6 @@ namespace MoodPlaylistApi.Interfaces
     {
         Task<ApiResponse<LoginResponseDto>> RegisterAsync(RegisterDto registerRequest);
         Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginDto loginRequest);
+        Task<ApiResponse<string>> LogoutAsync(Guid userId);
     }
 }

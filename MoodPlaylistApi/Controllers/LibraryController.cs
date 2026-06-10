@@ -8,24 +8,13 @@ using MoodPlaylistApi.Models;
 using MoodPlaylistApi.Services;
 using MoodPlaylistApi.Utilities;
 using System.Net;
-using System.Security.Claims;
 
 namespace MoodPlaylistApi.Controllers
 {
-    [ApiController]
     [Authorize]
-    [Route("api/library")]
-    public class LibraryController(IUnitOfWork uow, ISpotifyService spotifyService) : Controller
+    [Route("library")]
+    public class LibraryController(IUnitOfWork uow, ISpotifyService spotifyService) : BaseController
     {
-
-        protected string GetClaimValue(string claimType)
-            => HttpContext.User.FindFirst(claimType)?.Value ??
-            throw new Exception($"Claim '{claimType}' not found.");
-
-        protected string GetUserId() => GetClaimValue(ClaimTypes.NameIdentifier);
-        protected string GetName() => GetClaimValue(ClaimTypes.Name);
-        protected string GetEmail() => GetClaimValue(ClaimTypes.Email);
-
         // Get available moods
         [HttpGet("available-moods")]
         public async Task<IActionResult> GetAvailableMoods()

@@ -12,8 +12,10 @@ namespace MoodPlaylistApi.Services
     {
         public static string CreateToken(User user)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8
-                .GetBytes(JwtSettingsHelper.Key));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSettingsHelper.Key));
+
+            if (key.KeySize < 256)
+                throw new InvalidOperationException("JWT key must be at least 256 bits (32 characters).");
 
             var maxAge = DateTime.UtcNow.AddMinutes(JwtSettingsHelper.MaxAge);
 
