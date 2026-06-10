@@ -20,14 +20,12 @@ namespace MoodPlaylistApi.Data.Repositories
             // Bad practice will be used here as this isn't a real project and is only for demonstration purposes. 
 
             if(await dc.Users.AnyAsync(u => u.Email == registerRequest.Email))
-            {
                 return ApiResponse<LoginResponseDto>.Error(HttpStatusCode.BadRequest, "Email already exists.");
-            }
-            int count = await dc.Users.CountAsync();
+
             // Hash the password before saving (this is a simplified example, consider using a proper hashing algorithm in production)
             string passwordHash = HashString(registerRequest.Password);
             // Generate tag for public user identification
-            string tag = await CodeGenerator.Generate($"User-{count+1}-");
+            string tag = Guid.CreateVersion7().ToString()[^10..];
             var (refreshToken, refreshTokenExpiry) = Jwt.GenerateRefreshToken();
             // Create a new user entity
             User user = new()

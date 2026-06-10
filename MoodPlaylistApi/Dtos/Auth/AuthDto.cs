@@ -4,7 +4,7 @@ namespace MoodPlaylistApi.Dtos.Auth
 {
     public sealed record RegisterDto
     {
-        [MinLength(2), MaxLength(50)]
+        [MinLength(2), MaxLength(100)]
         public required string Name { get; set; }
         [EmailAddress]
         public required string Email { get; set; }

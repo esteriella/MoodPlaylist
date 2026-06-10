@@ -1,14 +1,19 @@
+
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MoodPlaylistApi.Data;
 using MoodPlaylistApi.Helpers;
 using MoodPlaylistApi.Interfaces;
 using MoodPlaylistApi.Middlewares;
 using MoodPlaylistApi.Startup;
 using MoodPlaylistApi.Utilities;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.RateLimiting;
-// If you still get errors, ensure the Swashbuckle.AspNetCore NuGet package is referenced in the project.
 
 var builder = WebApplication.CreateBuilder(args);
 Logging.Main(builder);
@@ -17,8 +22,8 @@ var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 var logger = loggerFactory.CreateLogger<Program>();
 
 logger.LogInformation("Starting application...");
-
-Database.ConfigureDatabase(builder);
+var connectionString = builder.Configuration.GetConnectionString("AivenConnection") ?? throw new InvalidOperationException("Connection string 'AivenConnection' not found.");
+Database.ConfigureDatabase(builder, connectionString);
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -26,7 +31,27 @@ AuthDI.AddJwt(builder);
 
 HttpClientDI.AddSpotifyHttpClient(builder);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        Guid id = Guid.CreateVersion7();
+        string exId = $"ERR-{DateTime.UtcNow:ddmmyy}-{id}";
+        // API-specific model state error handling
+        var errorMessages = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .Distinct();
+
+        var errorMessage = string.Join("; ", errorMessages);
+        logger.LogError("Model validation failed. Error ID: {ExceptionId}. Errors: {Errors}", exId, errorMessages);
+        return new BadRequestObjectResult(ApiResponse<string>.Error(
+            HttpStatusCode.UnprocessableEntity,
+            $"Unable to process your request with errors:\n{errorMessage}.\n Contact support with error id: {exId}"
+        ));
+    };
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 // Configure global rate limiting for the application
@@ -90,27 +115,84 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(
         builder =>
         {
-            builder.WithOrigins("https://example.com")
+            builder.WithOrigins("http://localhost:3000")
                 .AllowAnyHeader()
-                .WithMethods("GET", "POST")
+                .WithMethods("GET", "POST", "PUT", "DELETE")
                 .AllowCredentials();
         });
 });
-// Swagger (optional, but useful for testing)
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString: connectionString,
+        name: "Mood Playlist Database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["db", "postgres"]
+    )
+    .AddUrlGroup(
+        new Uri("https://api.spotify.com"),
+        name: "Spotify API",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["external", "api"]
+    );
+
 
 var app = builder.Build();
+
 JwtSettingsHelper.JwtConfigure(app.Services.GetRequiredService<IConfiguration>());
 HashHelperSettings.Configure(app.Services.GetRequiredService<IConfiguration>());
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 :
+                              report.Status == HealthStatus.Degraded ? 503 : 500;
+
+        var descriptions = new Dictionary<string, string>
+        {
+            ["Mood Playlist Database"] = "MoodPlaylist database is operational and accepting connections.",
+            ["Spotify API"] = "Spotify recommendation API is reachable and responding to requests."
+        };
+
+        var uptimeSpan = (DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime());
+        var appInfo = new
+        {
+            name = "MoodPlaylist Web Api",
+            version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(),
+            environment = app.Environment.EnvironmentName ?? Environments.Development,
+            uptimeHours = $"{(int)uptimeSpan.TotalDays}d {(int)uptimeSpan.TotalHours}h {uptimeSpan.Minutes}m {uptimeSpan.Seconds}s"
+        };
+
+        var json = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            timestamp = DateTime.UtcNow,
+            app = appInfo,
+            checks = report.Entries.Select(e => new
+            {
+                key = e.Key,
+                status = e.Value.Status.ToString(),
+                duration = $"{e.Value.Duration.TotalSeconds}s {e.Value.Duration.TotalMilliseconds}ms",
+                description = e.Value.Description ?? descriptions.GetValueOrDefault(e.Key)
+            })
+        });
+
+        await context.Response.WriteAsync(json);
+    }
+});
+
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseRateLimiter();
 app.UseCors();
+
 // Enable Swagger UI in development
 if (app.Environment.IsDevelopment())
 {

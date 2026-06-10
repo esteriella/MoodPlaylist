@@ -1,4 +1,5 @@
-﻿using MoodPlaylistApi.Models;
+﻿using MoodPlaylistApi.Dtos;
+using MoodPlaylistApi.Models;
 
 namespace MoodPlaylistApi.Extensions
 {
@@ -33,5 +34,13 @@ namespace MoodPlaylistApi.Extensions
             }
             return features;
         }
+
+        public static AvailableMood GetAvailableMood(this Mood mood) => new() 
+        { 
+            Id = mood.Id,
+            Name = mood.Name,
+            Color = mood.Color,
+            Emoji = mood.Emoji
+        };
     }
 }

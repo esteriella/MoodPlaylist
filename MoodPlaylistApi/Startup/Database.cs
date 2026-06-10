@@ -5,9 +5,9 @@ namespace MoodPlaylistApi.Startup
 {
     public static class Database
     {
-        public static void ConfigureDatabase(this WebApplicationBuilder builder)
-        {// Add services to the container.
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        public static void ConfigureDatabase(this WebApplicationBuilder builder, string connectionString)
+        {
+            // Add services to the container.
             builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseNpgsql(
