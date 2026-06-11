@@ -22,7 +22,7 @@ var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 var logger = loggerFactory.CreateLogger<Program>();
 
 logger.LogInformation("Starting application...");
-var connectionString = builder.Configuration.GetConnectionString("AivenConnection") ?? throw new InvalidOperationException("Connection string 'AivenConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 Database.ConfigureDatabase(builder, connectionString);
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
