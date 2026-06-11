@@ -29,11 +29,6 @@ namespace MoodPlaylistApi.Models
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Playlist>().Property(x => x.Tracks).HasColumnType("jsonb");
-
-            // Set rule to make sure either MoodId or UserId is present (playlist must be associated with either a mood or a user)
-            //builder.Entity<Playlist>()
-            //    .ToTable(b => b
-            //    .HasCheckConstraint("CK_Playlist_MoodOrUser", "\"MoodId\" IS NOT NULL OR \"UserId\" IS NOT NULL"));
         }
     }
 }
