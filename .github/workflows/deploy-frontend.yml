@@ -37,5 +37,5 @@ jobs:
 
       # Deploy to Vercel
       - name: Deploy to Vercel
-        run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope esteriella --confirm
+        run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --confirm
         working-directory: ./src/MoodPlaylistWeb
