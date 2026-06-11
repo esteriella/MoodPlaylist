@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_DhyZWUzZ4tEVp27auTDjgmIpW4HR",
+      "name": "mood-playlist",
+      "directory": "src/MoodPlaylistWeb",
+      "orgId": "team_sdsX6DFZgJvoz07iKkA9p52Z"
+    }
+  ]
+}
