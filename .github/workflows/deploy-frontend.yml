@@ -15,12 +15,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Install Node.js 20.9 (or newer)
+      # Install Node.js 20.9
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20.9
-          cache: 'pnpm'
 
       # Install pnpm globally
       - name: Install pnpm
