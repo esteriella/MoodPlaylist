@@ -13,7 +13,6 @@ type AuthContextType = {
   request: <T>(url: string, options: RequestInit) => Promise<T>;
 };
 
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
