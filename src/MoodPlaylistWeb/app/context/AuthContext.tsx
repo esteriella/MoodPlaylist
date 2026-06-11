@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/dashboard");
   };
 
+  // ✅ Global logout function
   const logout = () => {
     setSkipAuthToast(true);
     router.push("/auth/login");
