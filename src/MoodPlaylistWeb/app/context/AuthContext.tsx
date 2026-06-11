@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const [skipAuthToast, setSkipAuthToast] = useState(false);
 
+  // ✅ Global authentication functions
   const login = (newToken: string, name: string) => {
     localStorage.setItem("authToken", newToken);
     localStorage.setItem("authName", name);
