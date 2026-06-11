@@ -15,13 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Install Node.js (runner already has Node, but this ensures correct version)
+      # Install Node.js 20.9 (or newer)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20.9
+          cache: 'pnpm'
 
-      # Install pnpm globally so it's available in PATH
+      # Install pnpm globally
       - name: Install pnpm
         run: npm install -g pnpm
 
@@ -35,7 +36,7 @@ jobs:
         run: pnpm build
         working-directory: ./src/MoodPlaylistWeb
 
-      # Deploy to Vercel using npx
+      # Deploy to Vercel
       - name: Deploy to Vercel
         run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope esteriella --confirm
         working-directory: ./src/MoodPlaylistWeb
