@@ -30,8 +30,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./MoodPlaylist/src/MoodPlaylistApi
-          file: ./MoodPlaylist/src/MoodPlaylistApi/Dockerfile
+          context: ./src/MoodPlaylistApi
+          file: ./src/MoodPlaylistApi/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/moodplaylistapi:latest
 
