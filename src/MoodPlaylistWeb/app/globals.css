@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --moodGradientStart: #6366F1; /* Indigo */
+  --moodGradientMid: #8B5CF6;   /* Purple */
+  --moodGradientEnd: #EC4899;   /* Pink */
+  /* animation: gradientShift 30s ease-in-out infinite; */
+}
+
+/* @media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+} */
+html, body {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+}
+
+/* @keyframes waveMove {
+  0% {
+    background-position: 0 0;
+  }
+  50% {
+    background-position: 50px 20px;
+  }
+  100% {
+    background-position: 0 0;
+  }
+} */
+
+/* @keyframes gradientShift {
+  0% {
+    --moodGradientStart: #6366F1;
+    --moodGradientMid: #8B5CF6;
+    --moodGradientEnd: #EC4899;
+  }
+  50% {
+    --moodGradientStart: #8B5CF6;
+    --moodGradientMid: #EC4899;
+    --moodGradientEnd: #6366F1;
+  }
+  100% {
+    --moodGradientStart: #6366F1;
+    --moodGradientMid: #8B5CF6;
+    --moodGradientEnd: #EC4899;
+  }
+} */
+
+
+
+body {
+  /* background: linear-gradient(to bottom left, var(--moodGradientStart), var(--moodGradientMid), var(--moodGradientEnd)); */
+  background-image: url(/wave-pattern.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 180% 350%;
+  background-attachment: fixed;
+  background-blend-mode: overlay;
+  min-height: 100vh;
+  /* animation: waveMove 10s ease-in-out infinite; */
+}
