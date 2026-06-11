@@ -1,9 +1,11 @@
-name: Build and Push Docker Image to GHCR
+name: Build and Push WebAPI Docker Image to GHCR
 
 on:
   push:
     branches:
       - master
+    paths:
+      - 'src/MoodPlaylistApi/**'
 
 jobs:
   build-and-deploy:
@@ -39,3 +41,4 @@ jobs:
       - name: Trigger Render deploy
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
