@@ -21,10 +21,9 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
+      # Install pnpm globally
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -37,3 +36,4 @@ jobs:
       - name: Deploy to Vercel
         run: pnpm dlx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope esteriella --confirm
         working-directory: ./src/MoodPlaylistWeb
+
