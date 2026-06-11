@@ -15,7 +15,6 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ✅ Global authentication provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(() => {
