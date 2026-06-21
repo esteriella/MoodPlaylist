@@ -61,3 +61,13 @@ body {
   min-height: 100vh;
   /* animation: waveMove 10s ease-in-out infinite; */
 }
+
+/* #hero {
+  background-image: url(../public/albums/background.png);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 420%;
+  background-attachment: relative;
+  background-blend-mode: overlay;
+  min-height: 100vh;
+} */

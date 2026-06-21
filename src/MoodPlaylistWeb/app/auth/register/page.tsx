@@ -60,98 +60,106 @@ const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
 
 
   return (
-    <main className="min-h-screen w-full flex">
-      {/* Left side: illustration */}
-      <div className="flex-1 flex items-center justify-center">
-        <img
-          src="/albums/auth-art.png"
-          alt="MoodPlaylist register illustration"
-          className="3xl min-h-screen"
-        />
+    <main className="min-h-screen w-full flex flex-col lg:flex-row">
+  {/* Left side: illustration (hidden on sm/md) */}
+  <div className="hidden lg:flex flex-1 items-center justify-center">
+    <img
+      src="/albums/auth-art.png"
+      alt="MoodPlaylist register illustration"
+      className="min-h-screen object-cover"
+    />
+  </div>
+
+  {/* Right side: register form */}
+  <div className="flex-1 flex items-center justify-center bg-linear-to-br from-[#a3366d] via-[#5f41a6] to-[#353680]">
+    <div className="bg-black/35 backdrop-blur-lg w-full max-w-md p-8 md:p-12 lg:p-20 rounded-2xl shadow-xl">
+      {/* Logo */}
+      <div className="flex items-center justify-center mb-6">
+        <span className="text-pink-400 text-2xl">❤️</span>
+        <h1 className="text-2xl font-bold text-white ml-2">
+          MoodPlaylist <span className="text-pink-300">🎵</span>
+        </h1>
       </div>
 
-      {/* Right side: register form */}
-      <div className="flex-1 flex items-center justify-center bg-linear-to-br from-[#a3366d] via-[#5f41a6] to-[#353680]">
-        <div className="bg-black/35 backdrop-blur-lg min-h-screen p-40 rounded-2xl shadow-xl w-full max-w-full">
-          <div className="flex items-center justify-center mb-6">
-            <span className="text-pink-400 text-2xl">❤️</span>
-            <h1 className="text-2xl font-bold text-white ml-2">
-              MoodPlaylist <span className="text-pink-300">🎵</span>
-            </h1>
-          </div>
+      {/* Heading */}
+      <h2 className="text-3xl font-bold text-white mb-6 text-center">
+        Create Your MoodPlaylist Account
+      </h2>
 
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">
-            Create Your MoodPlaylist Account
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
-              <UserIcon />
-              <input
-                type="text"
-                name="name"
-                placeholder="Name"
-                value={form.name}
-                onChange={handleChange}
-                className="flex-1 bg-transparent focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
-              <EmailIcon />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-                className="flex-1 bg-transparent focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
-              <LockIcon />
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={handleChange}
-                className="flex-1 bg-transparent focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
-              <LockCheckIcon />
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm Password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                className="flex-1 bg-transparent focus:outline-none"
-              />
-            </div>
-            {loading ? (
-              <div className="flex justify-center">
-                <Loader />
-              </div>
-            ) : ( 
-            <button
-              type="submit"
-              className="w-full py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg transition"
-            >
-              Register
-            </button>)} 
-          </form>
-
-          {error && <p className="text-red-400 mt-4 text-center">{error}</p>}
-
-          <p className="text-center text-gray-200 mt-6">
-            Already have an account?{" "}
-            <Link href="/auth/login" className="text-pink-300 hover:underline">
-              Login here
-            </Link>
-          </p>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
+          <UserIcon />
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={form.name}
+            onChange={handleChange}
+            className="flex-1 bg-transparent focus:outline-none"
+          />
         </div>
-      </div>
-    </main>
+        <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
+          <EmailIcon />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="flex-1 bg-transparent focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
+          <LockIcon />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            className="flex-1 bg-transparent focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center px-3 gap-2 py-2 rounded-lg bg-white/20 text-white">
+          <LockCheckIcon />
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirm Password"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            className="flex-1 bg-transparent focus:outline-none"
+          />
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center">
+            <Loader />
+          </div>
+        ) : (
+          <button
+            type="submit"
+            className="w-full py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg transition"
+          >
+            Register
+          </button>
+        )}
+      </form>
+
+      {/* Error */}
+      {error && <p className="text-red-400 mt-4 text-center">{error}</p>}
+
+      {/* Login link */}
+      <p className="text-center text-gray-200 mt-6">
+        Already have an account?{" "}
+        <Link href="/auth/login" className="text-pink-300 hover:underline">
+          Login here
+        </Link>
+      </p>
+    </div>
+  </div>
+</main>
+
   );
 }

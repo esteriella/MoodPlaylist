@@ -74,7 +74,7 @@ import { RegisterSchema, LoginSchema, LoginResponseModel, RegisterModel, LoginRe
 
 export async function registerUser(form: RegisterModel): Promise<ApiResponseModel<LoginResponseModel>> {
   return apiRequest<ApiResponseModel<LoginResponseModel>>(
-    `${config.apiBaseUrl}/api/auth/register`,
+    `${config.apiBaseUrl}/auth/register`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,7 +86,7 @@ export async function registerUser(form: RegisterModel): Promise<ApiResponseMode
 
 export async function loginUser(form: { email: string; password: string }): Promise<ApiResponseModel<LoginResponseModel>> {
   return apiRequest<ApiResponseModel<LoginResponseModel>>(
-    `${config.apiBaseUrl}/api/auth/login`,
+    `${config.apiBaseUrl}/auth/login`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
