@@ -39,7 +39,7 @@ namespace MoodPlaylistApi.Data.Repositories
 
             if (sortDir == "asc") query = query.OrderBy(p => p.CreatedAt);
             else query = query.OrderByDescending(p => p.CreatedAt);
-
+             
             var userPlaylists = await query
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)

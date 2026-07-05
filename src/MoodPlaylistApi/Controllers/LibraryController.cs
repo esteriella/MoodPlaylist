@@ -16,6 +16,7 @@ namespace MoodPlaylistApi.Controllers
     public class LibraryController(IUnitOfWork uow, ISpotifyService spotifyService) : BaseController
     {
         // Get available moods
+        [AllowAnonymous]
         [HttpGet("available-moods")]
         public async Task<IActionResult> GetAvailableMoods()
         {
@@ -41,6 +42,15 @@ namespace MoodPlaylistApi.Controllers
         }
 
         // Save a playlist based on mood to the user's library -> is for the user who wants to create a playlist based on mood and save it to their library
+        // Create a new playlist
+        [HttpPost("playlists")]
+        public async Task<IActionResult> CreatePlaylist([FromBody] UpsertPlaylist req)
+        {
+            Guid userId = Guid.Parse(GetUserId());
+            var response = await uow.LibraryRepository.CreatePlaylist(userId, req);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
         // Update playlist (title and/or tracks)
         [HttpPut("playlists/{playlistId}")]
         public async Task<IActionResult> UpdatePlaylist(
