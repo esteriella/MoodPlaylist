@@ -64,7 +64,7 @@ const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
   {/* Left side: illustration (hidden on sm/md) */}
   <div className="hidden lg:flex flex-1 items-center justify-center">
     <img
-      src="/albums/auth-art.png"
+      src="/albums/lady-music.png"
       alt="MoodPlaylist register illustration"
       className="min-h-screen object-cover"
     />

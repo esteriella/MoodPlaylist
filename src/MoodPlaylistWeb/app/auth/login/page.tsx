@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/app/context/AuthContext";
 import { EmailIcon, LockIcon } from "@/app/components/Icons";
 import Loader from "@/app/components/Loader";
-import { loginUser } from "@/app/api/auth"; // ✅ import API function
+import { loginUser } from "@/app/api/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function LoginPage() {
   {/* Left side: illustration (hidden on sm/md) */}
   <div className="hidden lg:flex flex-1 items-center justify-center">
     <img
-      src="/albums/auth-art.png"
+      src="/albums/lady-music.png"
       alt="MoodPlaylist illustration"
       className="min-h-screen object-cover"
     />

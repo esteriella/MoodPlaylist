@@ -119,6 +119,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import Header from "@/app/components/Header";
 import { useAuth } from "@/app/context/AuthContext" // adjust path to your project
 import { config } from "../helpers/config";
 
@@ -250,8 +251,10 @@ export default function DashboardPage() {
   };
 
   return (
+    
     <main className="min-h-screen p-10">
       {/* Header */}
+      
       <header className="flex justify-between items-center mb-10">
         <h1 className="text-4xl font-bold text-white">
           Welcome back, <span className="text-pink-300">{name}</span> 🎶
@@ -375,7 +378,7 @@ export default function DashboardPage() {
         
 
         {/* Recommendations */}
-        <section className="bg-black/35 backdrop-blur-lg p-6 rounded-xl shadow-lg md:col-span-3">
+        <section className="bg-black/35 backdrop-blur-lg mb-4 p-6 rounded-xl shadow-lg md:col-span-3">
           <h2 className="text-2xl font-semibold text-white mb-4">
             Recommended for You
           </h2>
