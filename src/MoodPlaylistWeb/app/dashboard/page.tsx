@@ -150,6 +150,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // `id` was not defined here; fetch all available moods instead
         const moodsRes = await fetch(`${config.apiBaseUrl}/library/available-moods`);
         const playlistsRes = await fetch(`${config.apiBaseUrl}/library/playlists`);
         const recRes = await fetch(`${config.apiBaseUrl}/library/recommendations`);

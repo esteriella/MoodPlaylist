@@ -23,10 +23,51 @@ namespace MoodPlaylistApi.Data.Repositories
         public async Task<Mood?> GetByIdAsync(Guid id) =>
             await dc.Moods.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
 
-        public async Task<ApiResponse<List<UserPlaylist>>> GetUserPlaylists(int pageNo = 1, int pageSize = 10, string sortDir = "asc", Guid? userId = null, Guid? moodId = null)
+        //public async Task<ApiResponse<List<UserPlaylist>>> GetUserPlaylists(int pageNo = 1, int pageSize = 10, string sortDir = "asc", Guid? userId = null, Guid? moodId = null)
+        //{
+        //    var query = dc.Playlists
+        //        .AsNoTracking()
+        //        .AsQueryable();
+
+        //    // Filter by user
+        //    if (userId.HasValue)
+        //        query = query.Where(p => p.UserId == userId.Value);
+
+        //    // Filter by mood
+        //    if (moodId.HasValue)
+        //        query = query.Where(p => p.MoodId == moodId.Value);
+
+        //    if (sortDir == "asc") query = query.OrderBy(p => p.CreatedAt);
+        //    else query = query.OrderByDescending(p => p.CreatedAt);
+
+        //    var userPlaylists = await query
+        //        .Skip((pageNo - 1) * pageSize)
+        //        .Take(pageSize)
+        //        .Select(p => new UserPlaylist
+        //        {
+        //            Title = p.Title,
+        //            CreatorName = p.User.Name,
+        //            CreatorTag = p.User.PublicId,
+        //            Mood = p.Mood != null ? p.Mood.GetAvailableMood() : null,
+        //            Tracks = p.GetTracks()
+        //        })
+        //        .ToListAsync();
+
+        //    return ApiResponse<UserPlaylist>.SuccessList(HttpStatusCode.OK, userPlaylists);
+        //}
+
+        // Get playlists (user-specific or public)
+        public async Task<ApiResponse<List<UserPlaylist>>> GetUserPlaylists(
+            int pageNo = 1,
+            int pageSize = 10,
+            string sortDir = "asc",
+            Guid? userId = null,
+            Guid? moodId = null)
         {
             var query = dc.Playlists
                 .AsNoTracking()
+                .Include(p => p.User)
+                .Include(p => p.Mood)
                 .AsQueryable();
 
             // Filter by user
@@ -37,9 +78,12 @@ namespace MoodPlaylistApi.Data.Repositories
             if (moodId.HasValue)
                 query = query.Where(p => p.MoodId == moodId.Value);
 
-            if (sortDir == "asc") query = query.OrderBy(p => p.CreatedAt);
-            else query = query.OrderByDescending(p => p.CreatedAt);
-             
+            // Sorting
+            query = sortDir.Equals("asc", StringComparison.OrdinalIgnoreCase)
+                ? query.OrderBy(p => p.CreatedAt)
+                : query.OrderByDescending(p => p.CreatedAt);
+
+            // Pagination + projection
             var userPlaylists = await query
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using MoodPlaylistApi.Dtos;
 using MoodPlaylistApi.Exceptions;
@@ -48,6 +49,31 @@ namespace MoodPlaylistApi.Controllers
         {
             Guid userId = Guid.Parse(GetUserId());
             var response = await uow.LibraryRepository.CreatePlaylist(userId, req);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
+        [HttpGet("playlists")]
+        public async Task<IActionResult> GetUserPlaylists(
+        [FromQuery] int pageNo = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string sortDir = "asc",
+        [FromQuery] Guid? moodId = null)
+        {
+            Guid userId = Guid.Parse(GetUserId());
+            var response = await uow.LibraryRepository.GetUserPlaylists(pageNo, pageSize, sortDir, userId, moodId);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
+        /// Get playlists created by other users(public discovery)
+        [AllowAnonymous]
+        [HttpGet("playlists/public")]
+        public async Task<IActionResult> GetPublicPlaylists(
+        [FromQuery] int pageNo = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string sortDir = "asc",
+        [FromQuery] Guid? moodId = null)
+        {
+            var response = await uow.LibraryRepository.GetUserPlaylists(pageNo, pageSize, sortDir, null, moodId);
             return StatusCode((int)response.StatusCode, response);
         }
 

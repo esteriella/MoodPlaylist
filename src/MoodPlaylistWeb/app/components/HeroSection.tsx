@@ -10,7 +10,7 @@ export default function HeroSection() {
   return (
     <section
       id="hero"
-      className="flex flex-col md:flex-row items-center justify-center py-2 px-8 relative top-0 left-0 overflow-hidden leading-0"
+      className="flex flex-col md:flex-row items-center justify-center py-2 px-10 relative top-0 left-0 overflow-hidden leading-0"
     >
       <div className="text-center md:text-left md:w-1/2">
         <h1 className="text-6xl font-extrabold text-white mb-6">
