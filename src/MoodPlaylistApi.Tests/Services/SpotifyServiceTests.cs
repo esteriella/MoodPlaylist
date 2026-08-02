@@ -67,11 +67,15 @@ public sealed class SpotifyServiceTests
         await Assert.ThrowsAsync<SpotifyApiException>(() => service.GetTrackById("track-1"));
     }
 
-    [Fact(DisplayName = "Recommendations sends genres and audio features and parses tracks")]
-    public async Task GetTracksByMoodRecommendations_SuccessfulResponse_SendsExpectedRequestAndParsesTracks()
+    [Fact(DisplayName = "Mood discovery searches each genre and combines unique tracks")]
+    public async Task GetTracksByMoodRecommendations_SuccessfulResponse_SearchesGenresAndParsesTracks()
     {
-        const string content = "{\"tracks\":[{\"id\":\"track-1\",\"name\":\"Sunshine\",\"is_playable\":true}]}";
-        var handler = new RecordingHttpMessageHandler(_ => RecordingHttpMessageHandler.JsonResponse(content));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            var id = request.RequestUri!.Query.Contains("dance", StringComparison.Ordinal) ? "track-2" : "track-1";
+            return RecordingHttpMessageHandler.JsonResponse(
+                $"{{\"tracks\":{{\"items\":[{{\"id\":\"{id}\",\"name\":\"Sunshine\",\"is_playable\":true}}],\"next\":null}}}}");
+        });
         var service = CreateService(handler);
         var audioFeatures = new Dictionary<string, Dictionary<string, double>>
         {
@@ -81,32 +85,38 @@ public sealed class SpotifyServiceTests
 
         var result = await service.GetTracksByMoodRecommendations(["pop", "dance"], audioFeatures);
 
-        var track = Assert.Single(result);
-        Assert.Equal("track-1", track.Id);
-        Assert.Equal("Sunshine", track.Name);
-        Assert.True(track.IsPlayable);
-        Assert.Equal(
-            "https://spotify.test/v1/recommendations?seed_genres=pop,dance&limit=20&min_danceability=0.5&target_energy=0.8",
-            handler.Request?.RequestUri?.AbsoluteUri);
+        Assert.Equal(2, result.Count);
+        Assert.Equal(["track-1", "track-2"], result.Select(track => track.Id));
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Contains("v1/search", handler.Request?.RequestUri?.AbsoluteUri);
+        Assert.DoesNotContain("recommendations", handler.Request?.RequestUri?.AbsoluteUri);
     }
 
-    [Fact(DisplayName = "Recommendations supports track seeds, market and requested limit")]
-    public async Task GetRecommendations_TrackSeedsAndOptions_SendsExpectedRequest()
+    [Fact(DisplayName = "Track seed discovery searches its artists and excludes the seed")]
+    public async Task GetRecommendations_TrackSeedsAndOptions_SearchesArtistWithMarket()
     {
-        var handler = new RecordingHttpMessageHandler(_ => RecordingHttpMessageHandler.JsonResponse("{\"tracks\":[]}"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.Contains("/tracks/", StringComparison.Ordinal))
+                return RecordingHttpMessageHandler.JsonResponse(
+                    "{\"id\":\"track-one\",\"artists\":[{\"name\":\"Seed Artist\"}]}");
+
+            return RecordingHttpMessageHandler.JsonResponse(
+                "{\"tracks\":{\"items\":[{\"id\":\"track-one\"},{\"id\":\"new-track\"}],\"next\":null}}");
+        });
         var service = CreateService(handler);
 
         var result = await service.GetRecommendations(
             [],
-            ["track/one", "track-two"],
+            ["track-one"],
             new Dictionary<string, Dictionary<string, double>>(),
             35,
             "ng");
 
-        Assert.Empty(result);
-        Assert.Equal(
-            "https://spotify.test/v1/recommendations?seed_tracks=track%2Fone,track-two&limit=35&market=NG",
-            handler.Request?.RequestUri?.AbsoluteUri);
+        Assert.Equal("new-track", Assert.Single(result).Id);
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Contains("q=artist%3A%22Seed%20Artist%22", handler.Request?.RequestUri?.AbsoluteUri);
+        Assert.Contains("market=NG", handler.Request?.RequestUri?.AbsoluteUri);
     }
 
     [Fact(DisplayName = "Recommendations returns an empty list when tracks are absent")]
@@ -120,7 +130,7 @@ public sealed class SpotifyServiceTests
         Assert.Empty(result);
     }
 
-    [Fact(DisplayName = "Recommendations throws a Spotify API exception for an unsuccessful response")]
+    [Fact(DisplayName = "Discovery throws a Spotify API exception for an unsuccessful response")]
     public async Task GetTracksByMoodRecommendations_UnsuccessfulResponse_ThrowsSpotifyApiException()
     {
         var handler = new RecordingHttpMessageHandler(_ =>

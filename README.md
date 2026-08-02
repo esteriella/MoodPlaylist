@@ -1,18 +1,18 @@
 # MoodPlaylist
 
-MoodPlaylist is a full-stack music discovery and playlist-management application. A listener selects one or more moods, the API translates those choices into Spotify genre seeds and audio-feature targets, and the application returns recommendations that can be saved into a personal playlist library.
+MoodPlaylist is a full-stack music discovery and playlist-management application. A listener selects one or more moods, the API translates those choices into Spotify catalog searches, and the application returns relevant tracks that can be saved into a personal playlist library.
 
 The project demonstrates end-to-end product engineering across a typed React interface, a layered ASP.NET Core API, PostgreSQL persistence, third-party API integration, authentication, observability, automated testing, containerization, and path-based deployment workflows.
 
 ## Highlights
 
-- Mood-driven music discovery backed by Spotify recommendations
-- Multi-mood recommendation blending across genre and audio-feature constraints
+- Mood-driven music discovery backed by Spotify catalog search
+- Multi-mood discovery distributed across configured genre searches
 - Spotify track, URL, and URI seed normalization
 - Account registration, login, logout, and JWT-protected operations
 - Personal playlist creation, editing, filtering, refresh, and track management
 - Public discovery of playlists created by other users
-- One-hour in-memory caching for mood recommendation results
+- One-hour in-memory caching for mood discovery results
 - PostgreSQL persistence through Entity Framework Core
 - Consistent API responses, validation, and centralized exception handling
 - Per-user and per-IP fixed-window rate limiting
@@ -41,11 +41,13 @@ The project demonstrates end-to-end product engineering across a typed React int
 
 ## Features
 
-### Mood-based recommendations
+### Mood-based discovery
 
-Moods are stored with Spotify genre seeds and JSON-based audio-feature constraints. Recommendation requests can combine mood IDs and Spotify track seeds, with a maximum of five combined seeds to respect Spotify's contract. When multiple moods are selected, the API distributes available genre slots across them and averages matching audio-feature targets.
+Moods are stored with Spotify genres and JSON-based audio-feature constraints. A discovery request may combine mood IDs and Spotify track selections, with an application limit of five combined selections. The controller distributes available genre slots across selected moods. The service searches Spotify directly for those genres, retrieves the artists attached to selected seed tracks, and adds artist searches to the discovery plan.
 
-Track seeds accept a raw Spotify ID, a `spotify:track:` URI, or an `open.spotify.com/track/...` URL. Recommendation requests also support a result limit from 1 to 100 and an optional two-letter market code.
+Track selections accept a raw Spotify ID, a `spotify:track:` URI, or an `open.spotify.com/track/...` URL. Selected tracks shape discovery through their artists and are excluded from the returned results. The service fetches search pages in round-robin order, removes duplicate track IDs, and continues until it reaches the requested limit or exhausts the available result pages. Requests support a limit from 1 to 100 and an optional two-letter market code.
+
+The database still contains audio-feature targets and the controller can blend them across moods, but the current Spotify service does not send those values upstream. Spotify removed Recommendations and Audio Features access for newer applications, so catalog search is used as the supported fallback. This preserves the domain model for a future recommendation provider without claiming that Spotify currently applies those constraints.
 
 ### Playlist library
 
@@ -53,7 +55,7 @@ Authenticated users can:
 
 - create and update playlists;
 - save multiple recommended tracks at once;
-- refresh a mood-linked playlist with new recommendations;
+- refresh a mood-linked playlist with newly discovered tracks;
 - remove tracks and check whether a track is already saved; and
 - browse their own playlists, other users' playlists, or all playlists.
 
@@ -89,7 +91,7 @@ ASP.NET Core API
   |
   +----> PostgreSQL (users, moods, playlists, tracks)
   |
-  +----> Spotify Web API (search and recommendations)
+  +----> Spotify Web API (track lookup and catalog search)
 ```
 
 The API follows dependency-injection and repository/unit-of-work patterns. Controllers depend on interfaces rather than concrete storage implementations, which allows controller behavior to be tested without a live database. The Spotify service is isolated behind `ISpotifyService` and a typed `HttpClient`, making its outbound contract deterministic in tests.
@@ -202,20 +204,20 @@ Open `http://localhost:3000`.
 | `POST` | `/auth/login` | Public | Authenticate and receive tokens |
 | `POST` | `/auth/logout` | Authenticated | Revoke the current user's refresh session |
 | `GET` | `/library/available-moods` | Public | List configured moods |
-| `GET` | `/library/available-moods/{id}/tracks` | Authenticated | Get cached recommendations for one mood |
-| `GET` | `/library/recommendations` | Authenticated | Blend mood and track seeds into recommendations |
+| `GET` | `/library/available-moods/{id}/tracks` | Authenticated | Get cached genre-search results for one mood |
+| `GET` | `/library/recommendations` | Authenticated | Discover tracks from mood genres and seed-track artists |
 | `GET` | `/library/playlists` | Conditional | Query `mine`, `others`, or `all` playlist views |
 | `POST` | `/library/playlists` | Authenticated | Create a playlist |
 | `PUT` | `/library/playlists/{playlistId}` | Authenticated | Update an owned playlist |
 | `POST` | `/library/playlists/{playlistId}/tracks` | Authenticated | Save tracks in bulk |
-| `POST` | `/library/playlists/{playlistId}/refresh` | Authenticated | Add fresh mood recommendations |
+| `POST` | `/library/playlists/{playlistId}/refresh` | Authenticated | Add newly discovered tracks for the playlist mood |
 | `DELETE` | `/library/playlists/{playlistId}/tracks/{trackId}` | Authenticated | Remove a saved track |
 | `GET` | `/library/playlists/{playlistId}/tracks/{trackId}/exists` | Authenticated | Check saved-track membership |
 | `GET` | `/health` | Public | Report API, database, and Spotify health |
 
 Protected requests use `Authorization: Bearer <token>`.
 
-Example recommendation request:
+Example discovery request:
 
 ```http
 GET /library/recommendations?moodIds=MoodGuid&trackIds=spotify:track:TrackId&limit=20&market=NG
@@ -238,7 +240,7 @@ Collect cross-platform coverage for the complete suite:
 dotnet test src/MoodPlaylist.slnx --collect:"XPlat Code Coverage"
 ```
 
-The backend suite uses xUnit, Moq, WebApplicationFactory, and Testcontainers. Unit tests cover controller contracts, authentication result forwarding, recommendation validation and normalization, playlist query modes and mutations, cache behavior, JWT creation/configuration, exception mapping, request logging, Spotify token acquisition/caching, response parsing, and typed `HttpClient` registration. Spotify tests use recording in-memory HTTP handlers, so they need neither network access nor live credentials.
+The backend suite uses xUnit, Moq, WebApplicationFactory, and Testcontainers. Unit tests cover controller contracts, authentication result forwarding, discovery validation and track normalization, playlist query modes and mutations, cache behavior, JWT creation/configuration, exception mapping, request logging, Spotify token acquisition/caching, paginated genre/artist search, response parsing, and typed `HttpClient` registration. Spotify tests use recording in-memory HTTP handlers, so they need neither network access nor live credentials.
 
 The latest documented audit records 72 passing non-integration tests plus nine PostgreSQL integration tests. The integration suite applies real EF Core migrations to a disposable PostgreSQL 17 container and exercises repositories, JSONB track persistence, authentication middleware, and complete HTTP registration/login flows. Docker is required to execute these tests. The nine integration tests are discovered locally and are configured to execute on GitHub's Ubuntu runners; they have not been executed on the current development machine because Docker is unavailable there. See `TESTTASKS.md` and `TESTDECISIONS.md` for the verification record and rationale.
 
@@ -332,7 +334,7 @@ Spotify__ClientSecret=...
 ## Engineering decisions demonstrated
 
 - **Testable boundaries:** controllers and external services depend on interfaces, supporting fast and deterministic unit tests.
-- **Contract-aware integration:** Spotify's seed limits, ID formats, markets, and failure responses are handled explicitly.
+- **Contract-aware integration:** Spotify credential exchange, catalog-search pagination, track ID formats, markets, deduplication, seed exclusion, and failure responses are handled explicitly.
 - **Defensive API design:** validation, authorization, throttling, exception mapping, and uniform responses are cross-cutting concerns rather than repeated controller code.
 - **Operational readiness:** health checks, structured logs, correlation enrichment, database retries, containers, and deployment automation are built into the service.
 - **Type safety across the stack:** nullable C#, TypeScript models, and Zod-backed client validation reduce ambiguous states at system boundaries.
@@ -425,7 +427,7 @@ OAuth/OIDC social login can be added later through a trusted provider. Link exte
 
 - Add frontend pull-request validation so linting, tests, and production builds run before changes reach `master`, not only during deployment.
 - Complete the authentication roadmap above, beginning with adaptive password hashing, refresh-session rotation, secure browser cookies, and account recovery.
-- Extend HTTP end-to-end coverage from authentication into discovery, recommendations, and complete playlist management.
+- Extend HTTP end-to-end coverage from authentication into mood discovery and complete playlist management.
 - Pin GitHub Actions to current major versions or immutable commit SHAs and add deployment environments/approvals.
 
 ## License
