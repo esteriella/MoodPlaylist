@@ -1,4 +1,4 @@
-name: Build and Push WebAPI Docker Image to GHCR
+name: Test, Build, and Deploy WebAPI
 
 on:
   push:
@@ -6,39 +6,53 @@ on:
       - master
     paths:
       - 'src/MoodPlaylistApi/**'
+      - 'src/MoodPlaylistApi.Tests/**'
+      - 'src/MoodPlaylist.slnx'
+      - '.github/workflows/deploy-webapi.yml'
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  build-and-deploy:
+  test-build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Set up Docker Buildx
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore solution
+        run: dotnet restore src/MoodPlaylist.slnx
+
+      - name: Build solution
+        run: dotnet build src/MoodPlaylist.slnx --configuration Release --no-restore
+
+      - name: Test API
+        run: dotnet test src/MoodPlaylist.slnx --configuration Release --no-build --verbosity normal
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      # Log in to GitHub Container Registry
       - name: Log in to GHCR
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build and push Docker image
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: ./src/MoodPlaylistApi
           file: ./src/MoodPlaylistApi/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/moodplaylistapi:latest
 
-      # Trigger Render deploy
       - name: Trigger Render deploy
-        run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
-
+        run: curl --fail-with-body --request POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
