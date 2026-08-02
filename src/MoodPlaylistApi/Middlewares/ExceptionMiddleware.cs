@@ -4,8 +4,7 @@ namespace MoodPlaylistApi.Middlewares
 {
     public class ExceptionMiddleware(
         ILogger<ExceptionMiddleware> logger,
-        RequestDelegate next,
-        IConfiguration config)
+        RequestDelegate next)
     {
         public async Task Invoke(HttpContext context)
         {
@@ -15,9 +14,7 @@ namespace MoodPlaylistApi.Middlewares
             }
             catch (Exception exception)
             {
-                var hostEnv = config.GetValue<string>("ASPNETCORE_ENVIRONMENT")
-                    ?? throw new InvalidOperationException("Host environment not found.");
-                await ExceptionHandler.HandleAsync(context, exception, hostEnv, logger);
+                await ExceptionHandler.HandleAsync(context, exception, logger);
             }
         }
     }

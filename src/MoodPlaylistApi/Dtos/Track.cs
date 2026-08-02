@@ -10,14 +10,22 @@ namespace MoodPlaylistApi.Dtos
 
     public sealed record Track
     {
+        /// <summary>Spotify API URL for this track.</summary>
         [JsonPropertyName("href")]
         public string HRef { get; set; } = string.Empty;
+        /// <summary>The Spotify track ID.</summary>
+        /// <example>4iV5W9uYEdYUVa79Axb7Rh</example>
         [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
+        /// <summary>Whether Spotify reports the track as playable in the selected market.</summary>
         [JsonPropertyName("is_playable")]
         public bool IsPlayable { get; set; } = false;
+        /// <summary>The track title.</summary>
+        /// <example>Sunrise</example>
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+        /// <summary>Spotify popularity score from 0 to 100.</summary>
+        /// <example>72</example>
         [JsonPropertyName("popularity")]
         public int Popularity { get; set; } = 0;
         [JsonPropertyName("preview_url")]

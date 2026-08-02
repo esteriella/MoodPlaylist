@@ -1,10 +1,7 @@
 ﻿namespace MoodPlaylistApi.Exceptions
 {
-    // Base class for all custom exceptions in your app
-    public abstract class MoodPlaylistException(string message, Exception? inner = null) : Exception(message)
-    {
-        public new Exception InnerException { get; set; } = inner ?? new Exception("No additional details provided.");
-    }
+    public abstract class MoodPlaylistException(string message, Exception? inner = null)
+        : Exception(message, inner);
 
     // Specific exception types
     public class MoodNotFoundException(Guid moodId) : MoodPlaylistException($"Mood with ID {moodId} was not found.")

@@ -12,22 +12,35 @@ using System.Net;
 
 namespace MoodPlaylistApi.Controllers
 {
+    /// <summary>Discover moods and recommendations, and manage personal or community playlists.</summary>
     [Authorize]
     [Route("library")]
+    [Produces("application/json")]
     public class LibraryController(
         IUnitOfWork uow,
         ISpotifyService spotifyService,
         ICacheService cacheService) : BaseController
     {
+        /// <summary>List the moods available for recommendations and playlist filtering.</summary>
+        /// <response code="200">The configured moods.</response>
         [AllowAnonymous]
-        [HttpGet("available-moods")]
+        [HttpGet("available-moods", Name = "GetAvailableMoods")]
+        [ProducesResponseType(typeof(ApiResponse<List<AvailableMood>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAvailableMoods()
         {
             var response = await uow.LibraryRepository.GetAvailableMoods();
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpGet("available-moods/{id}/tracks")]
+        /// <summary>Get Spotify recommendations for one mood.</summary>
+        /// <param name="id">A mood ID returned by the available moods endpoint.</param>
+        /// <response code="200">Recommended Spotify tracks. Results are cached for one hour.</response>
+        /// <response code="404">The mood was not found or has no genre configuration.</response>
+        /// <response code="502">Spotify could not complete the request.</response>
+        [HttpGet("available-moods/{id}/tracks", Name = "GetAvailableMoodTracks")]
+        [ProducesResponseType(typeof(ApiResponse<List<Track>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status502BadGateway)]
         public async Task<IActionResult> GetAvailableMoodTracks([FromRoute] Guid id)
         {
             Mood mood = await uow.LibraryRepository.GetByIdAsync(id) ?? throw new MoodNotFoundException(id);
@@ -39,9 +52,20 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode(200, ApiResponse<Track>.SuccessList(HttpStatusCode.OK, tracks));
         }
 
-        // Spotify allows at most five seeds in total. Track seeds are kept first and
-        // the remaining slots are shared across the selected moods' configured genres.
-        [HttpGet("recommendations")]
+        /// <summary>Get recommendations from selected moods, tracks, or both.</summary>
+        /// <remarks>
+        /// Supply repeated query parameters, for example:
+        /// `?moodIds={id1}&amp;moodIds={id2}&amp;trackIds={spotifyTrackId}&amp;limit=20&amp;market=NG`.
+        /// Spotify accepts at most five combined mood and track seeds.
+        /// </remarks>
+        /// <param name="req">Recommendation seeds, result limit, and optional market.</param>
+        /// <response code="200">Tracks matching the selected seeds.</response>
+        /// <response code="400">No seeds were supplied, a mood is missing, or more than five seeds were selected.</response>
+        /// <response code="502">Spotify could not complete the request.</response>
+        [HttpGet("recommendations", Name = "GetRecommendations")]
+        [ProducesResponseType(typeof(ApiResponse<List<Track>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status502BadGateway)]
         public async Task<IActionResult> GetRecommendations([FromQuery] RecommendationRequest req)
         {
             var moodIds = req.MoodIds.Distinct().ToList();
@@ -133,7 +157,13 @@ namespace MoodPlaylistApi.Controllers
             return trimmed;
         }
 
-        [HttpPost("playlists")]
+        /// <summary>Create a playlist in the signed-in user's library.</summary>
+        /// <param name="req">Playlist title, optional mood, and tracks encoded as a JSON array.</param>
+        /// <response code="200">The created playlist.</response>
+        /// <response code="409">The user already has a playlist with this title.</response>
+        [HttpPost("playlists", Name = "CreatePlaylist")]
+        [ProducesResponseType(typeof(ApiResponse<UserPlaylist>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status409Conflict)]
         public async Task<IActionResult> CreatePlaylist([FromBody] UpsertPlaylist req)
         {
             Guid userId = Guid.Parse(GetUserId());
@@ -141,8 +171,22 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
+        /// <summary>Browse personal or community playlists.</summary>
+        /// <remarks>
+        /// Use `view=mine` for the current user's playlists, `view=others` to exclude them,
+        /// or `view=all` for the full gallery. Results can also be filtered by mood or creator tag.
+        /// </remarks>
+        /// <param name="pageNo">Page number starting at 1.</param>
+        /// <param name="pageSize">Maximum playlists to return.</param>
+        /// <param name="sortDir">`asc` or `desc`, based on creation time.</param>
+        /// <param name="moodId">Optional mood filter.</param>
+        /// <param name="creatorTag">Optional public creator tag.</param>
+        /// <param name="view">One of `mine`, `others`, or `all`.</param>
         [AllowAnonymous]
-        [HttpGet("playlists")]
+        [HttpGet("playlists", Name = "GetPlaylists")]
+        [ProducesResponseType(typeof(ApiResponse<List<UserPlaylist>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetPlaylists(
             [FromQuery] int pageNo = 1,
             [FromQuery] int pageSize = 10,
@@ -170,7 +214,13 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPut("playlists/{playlistId}")]
+        /// <summary>Update an owned playlist's title or append tracks.</summary>
+        /// <param name="playlistId">The playlist to update.</param>
+        /// <param name="req">The new title, mood, or tracks.</param>
+        [HttpPut("playlists/{playlistId}", Name = "UpdatePlaylist")]
+        [ProducesResponseType(typeof(ApiResponse<UserPlaylist>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePlaylist(
             [FromRoute] Guid playlistId,
             [FromBody] UpsertPlaylist req)
@@ -180,7 +230,13 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPost("playlists/{playlistId}/tracks")]
+        /// <summary>Save one or more tracks to an owned playlist.</summary>
+        /// <param name="playlistId">The destination playlist.</param>
+        /// <param name="req">Tracks to add; duplicates are skipped.</param>
+        [HttpPost("playlists/{playlistId}/tracks", Name = "AddTracks")]
+        [ProducesResponseType(typeof(ApiResponse<List<Track>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status409Conflict)]
         public async Task<IActionResult> AddTracks(
             [FromRoute] Guid playlistId,
             [FromBody] SaveTracksRequest req)
@@ -193,7 +249,12 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPost("playlists/{playlistId}/refresh")]
+        /// <summary>Add fresh Spotify recommendations based on an owned playlist's mood.</summary>
+        /// <param name="playlistId">An owned playlist with a mood.</param>
+        [HttpPost("playlists/{playlistId}/refresh", Name = "RefreshPlaylist")]
+        [ProducesResponseType(typeof(ApiResponse<List<Track>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status502BadGateway)]
         public async Task<IActionResult> RefreshPlaylist([FromRoute] Guid playlistId)
         {
             Guid userId = Guid.Parse(GetUserId());
@@ -209,7 +270,12 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpDelete("playlists/{playlistId}/tracks/{trackId}")]
+        /// <summary>Remove a track from an owned playlist.</summary>
+        /// <param name="playlistId">The playlist containing the track.</param>
+        /// <param name="trackId">The Spotify track ID.</param>
+        [HttpDelete("playlists/{playlistId}/tracks/{trackId}", Name = "RemoveTrack")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RemoveTrack(
             [FromRoute] Guid playlistId,
             [FromRoute] string trackId)
@@ -219,7 +285,11 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpGet("playlists/{playlistId}/tracks/{trackId}/exists")]
+        /// <summary>Check whether a track exists in an owned playlist.</summary>
+        /// <param name="playlistId">The playlist to inspect.</param>
+        /// <param name="trackId">The Spotify track ID.</param>
+        [HttpGet("playlists/{playlistId}/tracks/{trackId}/exists", Name = "TrackExists")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
         public async Task<IActionResult> TrackExists(
             [FromRoute] Guid playlistId,
             [FromRoute] string trackId)

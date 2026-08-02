@@ -6,73 +6,58 @@ namespace MoodPlaylistApi.Exceptions
 {
     public static class ExceptionHandler
     {
-        const string production = "Production";
-
-        public static async Task HandleAsync(HttpContext context, Exception exception, string env, ILogger logger)
+        public static async Task HandleAsync(HttpContext context, Exception exception, ILogger logger)
         {
-            var exceptionType = exception.GetType();
             HttpStatusCode statusCode;
             string message;
-            logger.LogError(exception, "An error occurred while processing a request.");
+            logger.LogError(
+                exception,
+                "Request failed. {Method} {Path} TraceId={TraceId}",
+                context.Request.Method,
+                context.Request.Path.Value,
+                context.TraceIdentifier);
 
-            if (exceptionType == typeof(UnauthorizedAccessException))
+            if (exception is UnauthorizedAccessException)
             {
                 statusCode = HttpStatusCode.Unauthorized;
                 message = "Access denied, authentication is required to access this resource.";
             }
-            else if (exceptionType == typeof(BadHttpRequestException))
+            else if (exception is BadHttpRequestException)
             {
                 statusCode = HttpStatusCode.BadRequest;
                 message = "Incorrect request, check your request and try again.";
             }
-            else if (exceptionType == typeof(NotFound))
-            {
-                statusCode = HttpStatusCode.NotFound;
-                message = "The resource you are looking for does not exist or has been moved.";
-            }
-            else if (exceptionType == typeof(ForbidHttpResult))
-            {
-                statusCode = HttpStatusCode.Forbidden;
-                message = "Access denied, you do not have permission to access this resource.";
-            }
-            else if (exceptionType == typeof(InternalServerError))
-            {
-                statusCode = HttpStatusCode.InternalServerError;
-                message = "An unexpected error occurred on our server.";
-            }
-            else if (exceptionType == typeof(MoodNotFoundException))
+            else if (exception is MoodNotFoundException or TrackNotFoundException)
             {
                 statusCode = HttpStatusCode.NotFound;
                 message = exception.Message;
             }
-            else if (exceptionType == typeof(MoodGenreNotValidException))
+            else if (exception is MoodGenreNotValidException)
             {
                 statusCode = HttpStatusCode.NotFound;
                 message = exception.Message;
             }
-            else if (exceptionType == typeof(RecommendationRequestException))
+            else if (exception is RecommendationRequestException)
             {
                 statusCode = HttpStatusCode.BadRequest;
                 message = exception.Message;
             }
-            else if (exceptionType == typeof(SpotifyApiException))
+            else if (exception is SpotifyApiException)
             {
                 statusCode = HttpStatusCode.BadGateway;
-                message = exception.Message;
+                message = "Spotify is temporarily unavailable. Please try again shortly.";
             }
-            else if (exceptionType == typeof(PlaylistCreationException))
+            else if (exception is PlaylistCreationException)
             {
                 statusCode = HttpStatusCode.InternalServerError;
-                message = exception.Message;
+                message = "The playlist could not be created. Please try again.";
             }
             else
             {
-                statusCode = HttpStatusCode.ServiceUnavailable;
-                message = "The service is currently unavailable.";
+                statusCode = HttpStatusCode.InternalServerError;
+                message = "An unexpected error occurred. Please try again.";
             }
-            var response = env.Equals(production, StringComparison.OrdinalIgnoreCase)
-                   ? ApiResponse<string>.Error(statusCode, message)
-                   : ApiResponse<string>.Error(statusCode, exception.Message, exception.StackTrace);
+            var response = ApiResponse<string>.Error(statusCode, message);
 
             context.Response.StatusCode = (int)statusCode;
             context.Response.ContentType = "application/json";
