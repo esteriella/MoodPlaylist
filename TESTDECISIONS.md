@@ -54,4 +54,4 @@ Case-insensitive database comparisons use `EF.Functions.ILike`, which Npgsql tra
 
 ## TD-014: Test Host Configuration Timing
 
-Configuration required by top-level `Program.cs` must be added through `IHostBuilder` before the application entry point builds its `WebApplicationBuilder`. Service replacement in `ConfigureWebHost` remains appropriate for swapping the registered `AppDbContext` after startup configuration is available.
+Configuration required by top-level `Program.cs` is supplied as environment variables before `WebApplicationFactory` starts the entry point. `CreateHost` configuration is too late for values read immediately after `WebApplication.CreateBuilder`. The PostgreSQL test collection is non-parallel, and the factory restores previous environment values when disposed. Service replacement in `ConfigureWebHost` remains appropriate for swapping the registered `AppDbContext` after startup configuration is available.

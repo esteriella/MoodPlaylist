@@ -95,7 +95,7 @@ This file is the verification gate for the API test work. A task is only marked 
 - [x] Diagnose the four failed GitHub integration tests from the attached action log.
 - [x] Replace the untranslatable case-insensitive playlist title comparison with PostgreSQL `ILIKE`.
 - [x] Align JSONB queries with `Track`'s serialized lowercase `id` property.
-- [x] Inject WebApplicationFactory configuration before `Program.cs` reads the required connection string.
+- [x] Inject startup configuration through scoped process environment variables before `Program.cs` creates its builder.
 - [x] Rebuild in Release and run all 72 non-integration tests successfully.
 - [ ] Confirm all nine integration tests pass on the next Docker-backed GitHub run.
 

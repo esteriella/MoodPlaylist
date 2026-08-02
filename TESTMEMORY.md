@@ -39,7 +39,7 @@
 - `MoodPlaylistApiFactory` replaces the application's database registration with the fixture connection string and supplies safe test configuration. HTTP-level auth tests now exercise the complete ASP.NET pipeline against PostgreSQL.
 - Direct controller tests intentionally retain repository mocks for fast upper-layer isolation; HTTP integration tests provide the container-backed controller coverage.
 - First GitHub Testcontainers run passed five and failed four tests. Root causes were an EF-untranslatable `StringComparison` query, uppercase JSONB `Id` queries against lowercase serialized `id`, and test-host configuration being added after `Program.cs` required the connection string.
-- Fixes now use PostgreSQL `ILIKE`, lowercase JSONB property names, and `IHostBuilder.ConfigureAppConfiguration` in `MoodPlaylistApiFactory.CreateHost`. Docker-backed confirmation is pending the next GitHub run.
+- Fixes now use PostgreSQL `ILIKE` and lowercase JSONB property names. Because minimal-hosting executes `Program.cs` before `WebApplicationFactory.CreateHost` configuration is applied, `MoodPlaylistApiFactory` now sets required environment configuration in its constructor and restores previous values on disposal. Docker-backed confirmation is pending the next GitHub run.
 - Default tests do not contact Spotify or PostgreSQL.
 - A live Spotify smoke test and PostgreSQL Testcontainers coverage remain deferred.
 - The solution currently emits NU1903 for transitive `Microsoft.OpenApi` 2.4.1; this is production dependency maintenance, not a test failure.
