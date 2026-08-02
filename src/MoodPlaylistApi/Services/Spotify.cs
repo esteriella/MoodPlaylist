@@ -1,5 +1,6 @@
 ﻿using MoodPlaylistApi.Dtos;
 using MoodPlaylistApi.Exceptions;
+using System.Globalization;
 using System.Text.Json;
 
 namespace MoodPlaylistApi.Services
@@ -11,6 +12,12 @@ namespace MoodPlaylistApi.Services
 
         // Define method for getting recommandations based on mood's seed genres and audio features -> deserialize the response to a list of tracks and return it to the controller
         Task<List<Track>> GetTracksByMoodRecommendations(List<string> seedGenres, Dictionary<string, Dictionary<string, double>> audioFeatures);
+        Task<List<Track>> GetRecommendations(
+            IReadOnlyCollection<string> seedGenres,
+            IReadOnlyCollection<string> seedTracks,
+            IReadOnlyDictionary<string, Dictionary<string, double>> audioFeatures,
+            int limit = 20,
+            string? market = null);
     }
 
     public sealed class SpotifyService(HttpClient httpClient) : ISpotifyService
@@ -48,34 +55,50 @@ namespace MoodPlaylistApi.Services
         }
 
         public async Task<List<Track>> GetTracksByMoodRecommendations(List<string> seedGenres, Dictionary<string, Dictionary<string, double>> audioFeatures)
-        {
-            List<string> queryParams =
-            [
-                // because seed genres is required, we automatically add it and check in upper layer to see if null 
-                $"seed_genres={string.Join(",", seedGenres)}"
-            ];
+            => await GetRecommendations(seedGenres, [], audioFeatures);
 
-            // this check seems irrelevant because, it seems audio features will always be provide, not so sure though
-            if (audioFeatures is not null)
+        public async Task<List<Track>> GetRecommendations(
+            IReadOnlyCollection<string> seedGenres,
+            IReadOnlyCollection<string> seedTracks,
+            IReadOnlyDictionary<string, Dictionary<string, double>> audioFeatures,
+            int limit = 20,
+            string? market = null)
+        {
+            List<string> queryParams = [];
+
+            if (seedGenres.Count > 0)
+                queryParams.Add($"seed_genres={EncodeList(seedGenres)}");
+            if (seedTracks.Count > 0)
+                queryParams.Add($"seed_tracks={EncodeList(seedTracks)}");
+
+            queryParams.Add($"limit={limit.ToString(CultureInfo.InvariantCulture)}");
+            if (!string.IsNullOrWhiteSpace(market))
+                queryParams.Add($"market={Uri.EscapeDataString(market.ToUpperInvariant())}");
+
+            foreach (var feature in audioFeatures.OrderBy(x => x.Key, StringComparer.Ordinal))
             {
-                // this nested foreaach is too expensive, we can optimize it by using LINQ to flatten the dictionary and create the query parameters in one go
-                foreach (var feature in audioFeatures)
+                foreach (var constraint in feature.Value.OrderBy(x => x.Key, StringComparer.Ordinal))
                 {
-                    foreach (var constraint in feature.Value)
-                    {
-                        queryParams.Add($"{feature.Key}_{constraint.Key}={constraint.Value}");
-                    }
+                    queryParams.Add(
+                        $"{constraint.Key}_{feature.Key}={constraint.Value.ToString(CultureInfo.InvariantCulture)}");
                 }
             }
+
             var queryString = string.Join("&", queryParams);
             var response = await _httpClient.GetAsync($"v1/recommendations?{queryString}");
             if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
                 throw new SpotifyApiException(
-                     $"Failed.\n Content\n:{JsonSerializer.Serialize(response.Content)}");
+                    $"Spotify recommendations request failed with status {(int)response.StatusCode} ({response.StatusCode}). {error}");
+            }
 
             var content = await response.Content.ReadAsStringAsync();
             var recommendationsResponse = JsonSerializer.Deserialize<SpotifyRecommendationsResponse>(content);
             return recommendationsResponse?.Tracks ?? [];
         }
+
+        private static string EncodeList(IEnumerable<string> values) =>
+            string.Join(",", values.Select(value => Uri.EscapeDataString(value)));
     }
 }

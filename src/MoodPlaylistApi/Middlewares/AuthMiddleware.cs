@@ -22,6 +22,20 @@ namespace MoodPlaylistApi.Middlewares
                 {
                     var jwtToken = handler.ReadJwtToken(token);
 
+                    var publicId = jwtToken.Claims
+                        .FirstOrDefault(c => c.Type == CustomClaimTypes.UserId)?.Value;
+                    if (!string.IsNullOrWhiteSpace(publicId))
+                    {
+                        var user = await dc.Users.FirstOrDefaultAsync(u => u.PublicId == publicId);
+                        if (user is not null && context.User.Identity is ClaimsIdentity identity)
+                        {
+                            if (!identity.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
+                                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
+                            if (!identity.HasClaim(c => c.Type == ClaimTypes.Email))
+                                identity.AddClaim(new Claim(ClaimTypes.Email, user.Email));
+                        }
+                    }
+
                     var expClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp);
                     if (expClaim is not null && long.TryParse(expClaim.Value, out var expUnix))
                     {

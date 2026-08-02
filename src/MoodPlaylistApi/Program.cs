@@ -6,6 +6,7 @@ using MoodPlaylistApi.Data;
 using MoodPlaylistApi.Helpers;
 using MoodPlaylistApi.Interfaces;
 using MoodPlaylistApi.Middlewares;
+using MoodPlaylistApi.Services;
 using MoodPlaylistApi.Startup;
 using MoodPlaylistApi.Utilities;
 using System.Diagnostics;
@@ -26,6 +27,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 Database.ConfigureDatabase(builder, connectionString);
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICacheService, CacheService>();
 
 AuthDI.AddJwt(builder);
 

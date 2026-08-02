@@ -7,7 +7,7 @@ namespace MoodPlaylistApi.Models
         public required string Title { get; set; }
         public Guid? MoodId { get; set; }
         public Guid UserId { get; set; }
-        public string Tracks { get; set; } = "{}";
+        public string Tracks { get; set; } = "[]";
 
         public Mood? Mood { get; set; } 
         public User User { get; set; } = default!;

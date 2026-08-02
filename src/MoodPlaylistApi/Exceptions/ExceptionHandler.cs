@@ -50,6 +50,11 @@ namespace MoodPlaylistApi.Exceptions
                 statusCode = HttpStatusCode.NotFound;
                 message = exception.Message;
             }
+            else if (exceptionType == typeof(RecommendationRequestException))
+            {
+                statusCode = HttpStatusCode.BadRequest;
+                message = exception.Message;
+            }
             else if (exceptionType == typeof(SpotifyApiException))
             {
                 statusCode = HttpStatusCode.BadGateway;
