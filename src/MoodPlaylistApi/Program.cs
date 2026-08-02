@@ -124,7 +124,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(
         builder =>
         {
-            builder.WithOrigins("http://localhost:3000")
+            builder.WithOrigins("http://localhost:3000","https://mood-playlist-five.vercel.app")
                 .AllowAnyHeader()
                 .WithMethods("GET", "POST", "PUT", "DELETE")
                 .AllowCredentials();
