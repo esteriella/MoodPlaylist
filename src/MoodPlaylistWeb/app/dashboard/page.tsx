@@ -131,7 +131,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="app-shell min-h-screen text-white">
+    <main className="app-shell min-h-screen">
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <header className="dashboard-header">

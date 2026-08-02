@@ -19,3 +19,31 @@ Tests should characterize the current public behavior. If they expose a producti
 ## TD-005: Coverage Targets
 
 Coverage is used to find missing contracts, not as a reason to test private implementation details. Public controller actions and service behavior should be fully exercised; unused protected helpers and exhaustive private-helper permutations may remain uncovered when they add no distinct observable contract.
+
+## TD-006: Token Service Concurrency
+
+Spotify token tests verify that concurrent callers share one authentication request. This protects the semaphore and double-checked cache contract without introducing timing sleeps or live Spotify calls.
+
+## TD-007: Static JWT Settings
+
+JWT tests run in a non-parallel xUnit collection because `JwtSettingsHelper` stores process-wide static configuration. Tests restore valid settings after weak-key scenarios to prevent cross-test state leakage.
+
+## TD-008: Database-Coupled Middleware
+
+`AuthMiddleware` coverage is deferred to the PostgreSQL Testcontainers phase. It directly reads and updates `AppDbContext`; an EF in-memory substitute would hide relational/provider differences and conflict with the planned database testing boundary.
+
+## TD-009: Exception Contract
+
+Exception tests assert serialized JSON fields instead of deserializing back into `ApiResponse<T>`. The response type intentionally has private constructors, and production types should not be opened solely for tests.
+
+## TD-010: PostgreSQL Testcontainers
+
+Repository and database-coupled middleware tests use a real disposable PostgreSQL 17 container and real EF migrations. The container is shared per test collection for speed, while mutable tables are truncated before each test for isolation. Controller tests continue mocking repositories because their intended boundary remains the upper layer.
+
+## TD-011: CI Test Separation
+
+Unit and integration tests are selected with the `Category` trait. Both the pull-request test workflow and deployment workflow run them as separate required steps, making Docker failures and application failures easy to distinguish while ensuring deployment cannot bypass database integration tests.
+
+## TD-012: Two Controller Test Layers
+
+Direct controller tests keep mocked repository boundaries for fast, precise behavior checks. Separate `WebApplicationFactory` tests run controller routes through the real middleware, model validation, repositories, EF migrations, and PostgreSQL Testcontainer. This provides database realism without making every controller unit test slow or broad.

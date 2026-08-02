@@ -376,11 +376,11 @@ namespace MoodPlaylistApi.Data.Repositories
             // Use the async variant so the returned value can be awaited (avoids awaiting an int)
             var rows = await dc.Database.ExecuteSqlInterpolatedAsync($@"
                 UPDATE ""Playlists""
-                SET ""Tracks"" = (
+                SET ""Tracks"" = COALESCE((
                     SELECT jsonb_agg(elem)
                     FROM jsonb_array_elements(""Tracks"") elem
                     WHERE elem->>'Id' <> {trackId}
-                )
+                ), '[]'::jsonb)
                 WHERE ""Id"" = {playlistId} AND ""UserId"" = {userId};
             ");
 
@@ -416,9 +416,10 @@ namespace MoodPlaylistApi.Data.Repositories
         // Optional: check if track already exists in user’s library
         public async Task<ApiResponse<bool>> ExistsAsync(Guid userId, Guid playlistId, string trackId)
         {
+            var trackJson = JsonSerializer.Serialize(new[] { new { Id = trackId } });
             var exists = await dc.Playlists
                 .Where(p => p.Id == playlistId && p.UserId == userId)
-                .AnyAsync(p => EF.Functions.JsonContains(p.Tracks, $"{{\"Id\":\"{trackId}\"}}"));
+                .AnyAsync(p => EF.Functions.JsonContains(p.Tracks, trackJson));
 
             return ApiResponse<bool>.Success(HttpStatusCode.OK, data:exists);
         }

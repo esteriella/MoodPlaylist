@@ -33,6 +33,7 @@ builder.Services.AddSingleton<ICacheService, CacheService>();
 AuthDI.AddJwt(builder);
 
 HttpClientDI.AddSpotifyHttpClient(builder);
+ApiDocumentation.AddApiDocumentation(builder);
 
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {
@@ -55,8 +56,6 @@ builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
     };
 });
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
 // Configure global rate limiting for the application
 builder.Services.AddRateLimiter(options =>
 {
@@ -192,22 +191,11 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     }
 });
 
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseApiDocumentation();
 app.UseRateLimiter();
 app.UseCors();
-
-// Enable Swagger UI in development
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.UseHsts();
 
@@ -221,3 +209,5 @@ app.MapControllers();
 
 logger.LogInformation("Running application...");
 app.Run();
+
+public partial class Program;

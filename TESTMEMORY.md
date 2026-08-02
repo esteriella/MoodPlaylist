@@ -22,9 +22,22 @@
 - `MoodPlaylistApi` targets `net10.0`.
 - Controllers depend on `IUnitOfWork`; `LibraryController` also depends on `ISpotifyService`.
 - `SpotifyService` receives a typed `HttpClient` configured by `HttpClientDI`.
-- 42 tests pass on 2026-08-02 after a second missing-test audit.
+- 72 tests pass on 2026-08-02 after the upper-layer audit.
 - Current covered behavior includes all implemented controller actions, recommendation seed validation/normalization, playlist view authorization/filtering, bulk-save validation, refresh failures, Spotify response/request behavior, caching, and typed-client registration.
 - Coverlet reports 100% line coverage for Auth actions, every Library action state machine, Spotify, Cache, and `HttpClientDI`. Overall Library class coverage is 95.91% because some private helper permutations remain; `BaseController` is 60% because its unused name/email accessors have no public consumer.
+- Spotify now uses client-credentials authentication through `SpotifyTokenService` and `SpotifyAuthenticationHandler`; tests cover request shape, failures, caching, concurrency, and bearer attachment.
+- The active `Jwt` service is covered for signed access-token output, identity claims, weak-key rejection, and random refresh-token generation.
+- Final service coverage reports 100% line coverage for `Jwt`, `CacheService`, `SpotifyService`, `SpotifyTokenService`, `SpotifyAuthenticationHandler`, and `HttpClientDI`.
+- Exception mapping, exception middleware, JWT DI validation/environment behavior, hash-secret configuration, and code generation now have focused tests.
+- `AuthMiddleware` is deliberately deferred with PostgreSQL Testcontainers because it directly uses `AppDbContext` for claim enrichment and token refresh.
+- Full `Program.cs` application-factory smoke tests remain a future layer after test-host configuration can replace external database and Spotify startup requirements.
+- PostgreSQL integration tests use `Testcontainers.PostgreSql` 4.13.0 with `postgres:17-alpine`, apply real migrations once, and truncate mutable `Playlists`/`Users` data between tests.
+- Nine integration tests are tagged `Category=Integration`; 72 existing tests run under `Category!=Integration`.
+- `.github/workflows/test-webapi.yml` runs on API pull requests/manual dispatch. `.github/workflows/deploy-webapi.yml` runs both test categories before image build and deployment.
+- Local Docker is unavailable on the current machine, so integration execution is CI-verified; local Release compilation and integration discovery pass.
+- JSONB fixes made during integration setup: `ExistsAsync` now uses array containment, and `RemoveTrack` coalesces an empty aggregate to `[]` instead of violating the non-null column.
+- `MoodPlaylistApiFactory` replaces the application's database registration with the fixture connection string and supplies safe test configuration. HTTP-level auth tests now exercise the complete ASP.NET pipeline against PostgreSQL.
+- Direct controller tests intentionally retain repository mocks for fast upper-layer isolation; HTTP integration tests provide the container-backed controller coverage.
 - Default tests do not contact Spotify or PostgreSQL.
 - A live Spotify smoke test and PostgreSQL Testcontainers coverage remain deferred.
 - The solution currently emits NU1903 for transitive `Microsoft.OpenApi` 2.4.1; this is production dependency maintenance, not a test failure.
