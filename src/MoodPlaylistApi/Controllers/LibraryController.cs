@@ -32,7 +32,7 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        /// <summary>Get Spotify recommendations for one mood.</summary>
+        /// <summary>Discover Spotify tracks for one mood.</summary>
         /// <param name="id">A mood ID returned by the available moods endpoint.</param>
         /// <response code="200">Recommended Spotify tracks. Results are cached for one hour.</response>
         /// <response code="404">The mood was not found or has no genre configuration.</response>
@@ -52,11 +52,12 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode(200, ApiResponse<Track>.SuccessList(HttpStatusCode.OK, tracks));
         }
 
-        /// <summary>Get recommendations from selected moods, tracks, or both.</summary>
+        /// <summary>Discover tracks from selected moods, tracks, or both.</summary>
         /// <remarks>
         /// Supply repeated query parameters, for example:
         /// `?moodIds={id1}&amp;moodIds={id2}&amp;trackIds={spotifyTrackId}&amp;limit=20&amp;market=NG`.
-        /// Spotify accepts at most five combined mood and track seeds.
+        /// Up to five combined mood and track selections can shape the discovery results.
+        /// Mood genres are searched directly. Track selections contribute their artists and are excluded from the results.
         /// </remarks>
         /// <param name="req">Recommendation seeds, result limit, and optional market.</param>
         /// <response code="200">Tracks matching the selected seeds.</response>
@@ -78,7 +79,7 @@ namespace MoodPlaylistApi.Controllers
             if (moodIds.Count == 0 && trackIds.Count == 0)
                 throw new RecommendationRequestException("Select at least one mood or Spotify track.");
             if (moodIds.Count + trackIds.Count > 5)
-                throw new RecommendationRequestException("Spotify accepts at most five combined mood and track seeds.");
+                throw new RecommendationRequestException("Select at most five combined moods and tracks.");
 
             var moods = moodIds.Count == 0
                 ? []

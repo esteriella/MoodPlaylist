@@ -2,10 +2,24 @@
 
 namespace MoodPlaylistApi.Dtos
 {
-    public sealed record SpotifyRecommendationsResponse
+    public sealed record SpotifySearchResponse
     {
         [JsonPropertyName("tracks")]
-        public List<Track> Tracks { get; set; } = [];
+        public SpotifyTrackPage Tracks { get; set; } = new();
+    }
+
+    public sealed record SpotifyTrackPage
+    {
+        [JsonPropertyName("items")]
+        public List<Track> Items { get; set; } = [];
+        [JsonPropertyName("next")]
+        public string? Next { get; set; }
+    }
+
+    public sealed record SpotifyArtist
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
     }
 
     public sealed record Track
@@ -37,7 +51,10 @@ namespace MoodPlaylistApi.Dtos
         [JsonPropertyName("uri")]
         public string Uri { get; set; } = string.Empty;
         [JsonPropertyName("is_local")]
-        public bool IsLocal { get; set; } = false;     }
+        public bool IsLocal { get; set; } = false;
+        [JsonPropertyName("artists")]
+        public List<SpotifyArtist> Artists { get; set; } = [];
+    }
 
     //public sealed record TrackDetail
     //{
