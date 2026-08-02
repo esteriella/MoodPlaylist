@@ -121,7 +121,8 @@ namespace MoodPlaylistApi.Data.Repositories
 
         public async Task<ApiResponse<UserPlaylist>> CreatePlaylist(Guid userId, UpsertPlaylist req)
         {
-            if (await dc.Playlists.AnyAsync(p => p.Title.Equals(req.Title, StringComparison.CurrentCultureIgnoreCase) && p.UserId == userId))
+            if (await dc.Playlists.AnyAsync(p =>
+                    EF.Functions.ILike(p.Title, req.Title) && p.UserId == userId))
                 return ApiResponse<UserPlaylist>.Error(HttpStatusCode.Conflict, "You already have a playlist with the same title!");
 
             Playlist playlist = new()
@@ -191,7 +192,7 @@ namespace MoodPlaylistApi.Data.Repositories
                             WHERE NOT EXISTS (
                                 SELECT 1
                                 FROM jsonb_array_elements(""Tracks"") e
-                                WHERE e->>'Id' = new_elem->>'Id'
+                                WHERE e->>'id' = new_elem->>'id'
                             )
                         ) combined
                     ),
@@ -379,7 +380,7 @@ namespace MoodPlaylistApi.Data.Repositories
                 SET ""Tracks"" = COALESCE((
                     SELECT jsonb_agg(elem)
                     FROM jsonb_array_elements(""Tracks"") elem
-                    WHERE elem->>'Id' <> {trackId}
+                    WHERE elem->>'id' <> {trackId}
                 ), '[]'::jsonb)
                 WHERE ""Id"" = {playlistId} AND ""UserId"" = {userId};
             ");
@@ -416,7 +417,10 @@ namespace MoodPlaylistApi.Data.Repositories
         // Optional: check if track already exists in user’s library
         public async Task<ApiResponse<bool>> ExistsAsync(Guid userId, Guid playlistId, string trackId)
         {
-            var trackJson = JsonSerializer.Serialize(new[] { new { Id = trackId } });
+            var trackJson = JsonSerializer.Serialize(new[]
+            {
+                new Dictionary<string, string> { ["id"] = trackId }
+            });
             var exists = await dc.Playlists
                 .Where(p => p.Id == playlistId && p.UserId == userId)
                 .AnyAsync(p => EF.Functions.JsonContains(p.Tracks, trackJson));

@@ -38,6 +38,8 @@
 - JSONB fixes made during integration setup: `ExistsAsync` now uses array containment, and `RemoveTrack` coalesces an empty aggregate to `[]` instead of violating the non-null column.
 - `MoodPlaylistApiFactory` replaces the application's database registration with the fixture connection string and supplies safe test configuration. HTTP-level auth tests now exercise the complete ASP.NET pipeline against PostgreSQL.
 - Direct controller tests intentionally retain repository mocks for fast upper-layer isolation; HTTP integration tests provide the container-backed controller coverage.
+- First GitHub Testcontainers run passed five and failed four tests. Root causes were an EF-untranslatable `StringComparison` query, uppercase JSONB `Id` queries against lowercase serialized `id`, and test-host configuration being added after `Program.cs` required the connection string.
+- Fixes now use PostgreSQL `ILIKE`, lowercase JSONB property names, and `IHostBuilder.ConfigureAppConfiguration` in `MoodPlaylistApiFactory.CreateHost`. Docker-backed confirmation is pending the next GitHub run.
 - Default tests do not contact Spotify or PostgreSQL.
 - A live Spotify smoke test and PostgreSQL Testcontainers coverage remain deferred.
 - The solution currently emits NU1903 for transitive `Microsoft.OpenApi` 2.4.1; this is production dependency maintenance, not a test failure.

@@ -47,3 +47,11 @@ Unit and integration tests are selected with the `Category` trait. Both the pull
 ## TD-012: Two Controller Test Layers
 
 Direct controller tests keep mocked repository boundaries for fast, precise behavior checks. Separate `WebApplicationFactory` tests run controller routes through the real middleware, model validation, repositories, EF migrations, and PostgreSQL Testcontainer. This provides database realism without making every controller unit test slow or broad.
+
+## TD-013: PostgreSQL-Specific Queries
+
+Case-insensitive database comparisons use `EF.Functions.ILike`, which Npgsql translates to PostgreSQL `ILIKE`. JSONB queries use the wire property names defined by `JsonPropertyName`; for `Track.Id`, that name is lowercase `id`.
+
+## TD-014: Test Host Configuration Timing
+
+Configuration required by top-level `Program.cs` must be added through `IHostBuilder` before the application entry point builds its `WebApplicationBuilder`. Service replacement in `ConfigureWebHost` remains appropriate for swapping the registered `AppDbContext` after startup configuration is available.

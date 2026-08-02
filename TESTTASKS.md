@@ -90,6 +90,15 @@ This file is the verification gate for the API test work. A task is only marked 
 - [ ] Execute the nine integration tests locally.
   - Blocked locally because Docker is not installed; GitHub's Ubuntu runner verifies Docker before running them.
 
+## GitHub Testcontainers Failure Follow-up — 2026-08-02
+
+- [x] Diagnose the four failed GitHub integration tests from the attached action log.
+- [x] Replace the untranslatable case-insensitive playlist title comparison with PostgreSQL `ILIKE`.
+- [x] Align JSONB queries with `Track`'s serialized lowercase `id` property.
+- [x] Inject WebApplicationFactory configuration before `Program.cs` reads the required connection string.
+- [x] Rebuild in Release and run all 72 non-integration tests successfully.
+- [ ] Confirm all nine integration tests pass on the next Docker-backed GitHub run.
+
 ## Findings
 
 - The working tree already contains an unrelated change in `src/MoodPlaylistWeb/app/dashboard/page.tsx`; test work must not alter it.
