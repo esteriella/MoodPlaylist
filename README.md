@@ -120,8 +120,22 @@ Install the following before running the complete application:
 - [Node.js 22](https://nodejs.org/) (the deployment workflow uses 22.13)
 - [pnpm](https://pnpm.io/installation)
 - PostgreSQL
-- A Spotify API credential/token accepted by the configured Spotify endpoint
+- A Spotify Developer application owned by an account with an active Spotify Premium subscription
 - Docker, when running PostgreSQL integration tests or building the API image
+
+## Spotify application setup
+
+1. Sign in to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) with the Spotify account that will own the application.
+2. Confirm that this exact owner account has an active Spotify Premium subscription. Premium belonging only to an invited user or tester does not satisfy Spotify's Development Mode requirement.
+3. Create a Web API application and copy its client ID and client secret into the API configuration shown below.
+4. If Spotify's dashboard requires a redirect URI while configuring the application, use a local HTTPS URI such as `https://localhost:7115/auth/spotify/callback`. MoodPlaylist currently uses the client-credentials flow and therefore does not redirect users to this URI or expose a Spotify callback endpoint.
+5. Never place the client secret in the Next.js environment or any browser-delivered code.
+
+Spotify requires the owner of a Development Mode application to maintain Premium. If that subscription expires, Spotify returns `403 Forbidden` for otherwise valid API calls. Restoring Premium can take several hours to reactivate API access. The callback URI, OAuth scopes, and application-user allowlist cannot remove this owner-level requirement.
+
+The application uses Spotify's supported Search and Get Track endpoints. Spotify's deprecated Recommendations endpoint is not called. Mood genres become catalog-search filters; selected tracks contribute their artist names and are excluded from the returned discoveries. Spotify no longer provides the old audio-feature recommendation behavior to new Development Mode applications.
+
+For current restrictions, consult Spotify's [February 2026 migration guide](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide) and [quota-mode documentation](https://developer.spotify.com/documentation/web-api/concepts/quota-modes).
 
 ## Local configuration
 
@@ -142,6 +156,8 @@ dotnet user-secrets set "Spotify:ClientSecret" "YOUR_SPOTIFY_CLIENT_SECRET"
 ```
 
 The API exchanges the Spotify client ID and secret at the Accounts API, caches the returned access token until shortly before expiry, and attaches it to Spotify API requests through a delegating handler. Keep both credentials in user secrets locally and managed secret storage in deployed environments.
+
+If the Spotify owner has just activated Premium, restart the API after Spotify has applied the account change. Restarting clears the in-memory access-token cache and obtains a fresh application token.
 
 Create `src/MoodPlaylistWeb/.env.local` for the web client:
 
@@ -223,6 +239,18 @@ Example discovery request:
 GET /library/recommendations?moodIds=MoodGuid&trackIds=spotify:track:TrackId&limit=20&market=NG
 Authorization: Bearer YourJwt
 ```
+
+## Spotify troubleshooting
+
+| Response | Likely cause | Action |
+| --- | --- | --- |
+| `401 Unauthorized` | Missing, invalid, or expired Spotify application token | Check the client ID and secret, then restart the API so it obtains a new token. |
+| `403 Forbidden` with “Active premium subscription required” | The Spotify account that owns the Client ID does not currently have Premium | Activate Premium on the owner account, verify that the configured credentials belong to that account, wait several hours, and restart the API. |
+| `403 Forbidden` for an authenticated Spotify user | The user is not allowed to use a Development Mode app | Add the user under the app's **Users Management** page. This does not replace the owner's Premium requirement. |
+| `404 Not Found` from `/v1/recommendations` | Code or a deployed instance is still calling Spotify's deprecated Recommendations endpoint | Deploy the current API version, which uses `/v1/search`, and restart the service. |
+| `429 Too Many Requests` | Spotify rate or Development Mode quota was exceeded | Respect `Retry-After`, reduce request frequency, and retry later. |
+
+Detailed Spotify responses and request trace IDs are written only to server logs. API clients receive a safe, generic integration-error message rather than Spotify credentials or upstream response bodies.
 
 ## Testing and quality checks
 
