@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <section className="relative mx-auto flex w-full max-w-360 flex-col items-center overflow-hidden pl-7 pb-16 pt-12 sm:px-10 md:min-h-170 md:flex-row md:items-center md:px-12 md:py-16 lg:px-16">
+    <section className="relative mx-auto flex w-full max-w-360 flex-col items-center overflow-hidden px-7 pb-16 pt-12 sm:px-10 md:min-h-170 md:flex-row md:items-center md:px-12 md:py-16 lg:px-16">
       <div className="z-10 text-center md:w-[48%] md:text-left lg:w-[46%]">
         <p className="mb-5 text-xs font-black uppercase tracking-[.24em] text-pink-200">A playlist for every feeling</p>
         <h1 className="mb-6 font-serif text-5xl leading-[.95] tracking-tight text-white md:text-7xl">Music that meets you where you are.</h1>
