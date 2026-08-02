@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using MoodPlaylistApi.Dtos;
 using MoodPlaylistApi.Exceptions;
@@ -13,9 +14,11 @@ namespace MoodPlaylistApi.Controllers
 {
     [Authorize]
     [Route("library")]
-    public class LibraryController(IUnitOfWork uow, ISpotifyService spotifyService) : BaseController
+    public class LibraryController(
+        IUnitOfWork uow,
+        ISpotifyService spotifyService,
+        ICacheService cacheService) : BaseController
     {
-        // Get available moods
         [AllowAnonymous]
         [HttpGet("available-moods")]
         public async Task<IActionResult> GetAvailableMoods()
@@ -24,25 +27,112 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Get tracks for a specific mood from spotify -> is for the user who wants to create a playlist based on mood and not look through playlists created by other users based on the same mood
-        // we need to guard this endpoint with imemorycache using cache key moodid so that we don't make too many requests to spotify for the same mood in a short period of time, we can cache the response for a specific mood for a certain amount of time (e.g. 1 hour) and return the cached response if the same mood is requested again within that time frame
-        // best to create a central cache service for all caching withing the system
         [HttpGet("available-moods/{id}/tracks")]
         public async Task<IActionResult> GetAvailableMoodTracks([FromRoute] Guid id)
         {
             Mood mood = await uow.LibraryRepository.GetByIdAsync(id) ?? throw new MoodNotFoundException(id);
-            // Get tracks for the mood from spotify using recommendations endpoint with the seed genres and audio features from the mood
             List<string> seedGenres = mood.GetSeedGenres();
             if (seedGenres is { Count: 0})
                 throw new MoodGenreNotValidException($"Mood with id {id} does not have any seed genres defined.");
 
-            Dictionary<string, Dictionary<string, double>> audioFeatures = mood.GetAudioFeatures();
-            List<Track> tracks = await spotifyService.GetTracksByMoodRecommendations(seedGenres, audioFeatures);
+            List<Track> tracks = await GetMoodTracks(mood);
             return StatusCode(200, ApiResponse<Track>.SuccessList(HttpStatusCode.OK, tracks));
         }
 
-        // Save a playlist based on mood to the user's library -> is for the user who wants to create a playlist based on mood and save it to their library
-        // Create a new playlist
+        // Spotify allows at most five seeds in total. Track seeds are kept first and
+        // the remaining slots are shared across the selected moods' configured genres.
+        [HttpGet("recommendations")]
+        public async Task<IActionResult> GetRecommendations([FromQuery] RecommendationRequest req)
+        {
+            var moodIds = req.MoodIds.Distinct().ToList();
+            var trackIds = req.TrackIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(NormalizeSpotifyTrackId)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            if (moodIds.Count == 0 && trackIds.Count == 0)
+                throw new RecommendationRequestException("Select at least one mood or Spotify track.");
+            if (moodIds.Count + trackIds.Count > 5)
+                throw new RecommendationRequestException("Spotify accepts at most five combined mood and track seeds.");
+
+            var moods = moodIds.Count == 0
+                ? []
+                : await uow.LibraryRepository.GetByIdsAsync(moodIds);
+            var missingMoodIds = moodIds.Except(moods.Select(m => m.Id)).ToList();
+            if (missingMoodIds.Count > 0)
+                throw new RecommendationRequestException(
+                    $"The following moods were not found: {string.Join(", ", missingMoodIds)}.");
+
+            var seedGenres = SelectSeedGenres(moods, 5 - trackIds.Count);
+            if (seedGenres.Count + trackIds.Count == 0)
+                throw new RecommendationRequestException("The selected moods do not have usable Spotify genre seeds.");
+
+            var audioFeatures = BlendAudioFeatures(moods);
+            var tracks = await spotifyService.GetRecommendations(
+                seedGenres, trackIds, audioFeatures, req.Limit, req.Market);
+
+            return StatusCode(StatusCodes.Status200OK,
+                ApiResponse<Track>.SuccessList(HttpStatusCode.OK, tracks));
+        }
+
+        private static List<string> SelectSeedGenres(IReadOnlyList<Mood> moods, int availableSlots)
+        {
+            var genresByMood = moods
+                .Select(mood => new Queue<string>(mood.GetSeedGenres()
+                    .Distinct(StringComparer.OrdinalIgnoreCase)))
+                .ToList();
+            var result = new List<string>();
+
+            while (result.Count < availableSlots && genresByMood.Any(queue => queue.Count > 0))
+            {
+                foreach (var genres in genresByMood)
+                {
+                    while (genres.Count > 0 && result.Contains(genres.Peek(), StringComparer.OrdinalIgnoreCase))
+                        genres.Dequeue();
+                    if (genres.Count > 0 && result.Count < availableSlots)
+                        result.Add(genres.Dequeue());
+                }
+            }
+
+            return result;
+        }
+
+        private static Dictionary<string, Dictionary<string, double>> BlendAudioFeatures(
+            IReadOnlyCollection<Mood> moods)
+        {
+            return moods
+                .SelectMany(mood => mood.GetAudioFeatures())
+                .GroupBy(feature => feature.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .SelectMany(feature => feature.Value)
+                        .GroupBy(constraint => constraint.Key, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(
+                            constraint => constraint.Key,
+                            constraint => constraint.Average(value => value.Value)),
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeSpotifyTrackId(string value)
+        {
+            var trimmed = value.Trim();
+            const string spotifyPrefix = "spotify:track:";
+            if (trimmed.StartsWith(spotifyPrefix, StringComparison.OrdinalIgnoreCase))
+                return trimmed[spotifyPrefix.Length..];
+
+            if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) &&
+                uri.Host.Equals("open.spotify.com", StringComparison.OrdinalIgnoreCase))
+            {
+                var segments = uri.AbsolutePath.Trim('/').Split('/');
+                if (segments.Length >= 2 && segments[^2].Equals("track", StringComparison.OrdinalIgnoreCase))
+                    return segments[^1];
+            }
+
+            return trimmed;
+        }
+
         [HttpPost("playlists")]
         public async Task<IActionResult> CreatePlaylist([FromBody] UpsertPlaylist req)
         {
@@ -51,7 +141,35 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Update playlist (title and/or tracks)
+        [AllowAnonymous]
+        [HttpGet("playlists")]
+        public async Task<IActionResult> GetPlaylists(
+            [FromQuery] int pageNo = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string sortDir = "asc",
+            [FromQuery] Guid? moodId = null,
+            [FromQuery] string? creatorTag = null,
+            [FromQuery] string view = "mine")
+        {
+            Guid? currentUserId = Guid.TryParse(
+                HttpContext?.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                out var parsedUserId)
+                ? parsedUserId
+                : null;
+
+            var normalizedView = view.Trim().ToLowerInvariant();
+            if (normalizedView is not ("mine" or "others" or "all"))
+                throw new RecommendationRequestException("View must be mine, others, or all.");
+            if (normalizedView == "mine" && currentUserId is null)
+                throw new UnauthorizedAccessException("Sign in to view your playlists.");
+
+            var ownerId = normalizedView == "mine" ? currentUserId : null;
+            var excludedOwnerId = normalizedView == "others" ? currentUserId : null;
+            var response = await uow.LibraryRepository.GetPlaylists(
+                pageNo, pageSize, sortDir, ownerId, excludedOwnerId, moodId, creatorTag);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
         [HttpPut("playlists/{playlistId}")]
         public async Task<IActionResult> UpdatePlaylist(
             [FromRoute] Guid playlistId,
@@ -62,18 +180,35 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Add a track to a playlist
         [HttpPost("playlists/{playlistId}/tracks")]
-        public async Task<IActionResult> AddTrack(
+        public async Task<IActionResult> AddTracks(
             [FromRoute] Guid playlistId,
-            [FromBody] Track track)
+            [FromBody] SaveTracksRequest req)
         {
             Guid userId = Guid.Parse(GetUserId());
-            var response = await uow.LibraryRepository.AddTrackAsync(userId, playlistId, track);
+            if (req.Tracks.Count == 0)
+                throw new RecommendationRequestException("Select at least one track to save.");
+
+            var response = await uow.LibraryRepository.AddTracksAsync(userId, playlistId, req.Tracks);
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Remove a track from a playlist
+        [HttpPost("playlists/{playlistId}/refresh")]
+        public async Task<IActionResult> RefreshPlaylist([FromRoute] Guid playlistId)
+        {
+            Guid userId = Guid.Parse(GetUserId());
+            Guid? moodId = await uow.LibraryRepository.GetOwnedPlaylistMoodId(userId, playlistId);
+            if (moodId is null)
+                throw new RecommendationRequestException(
+                    "The playlist was not found in your library or does not have a mood.");
+
+            Mood mood = await uow.LibraryRepository.GetByIdAsync(moodId.Value)
+                ?? throw new MoodNotFoundException(moodId.Value);
+            var tracks = await GetMoodTracks(mood);
+            var response = await uow.LibraryRepository.AddTracksAsync(userId, playlistId, tracks);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
         [HttpDelete("playlists/{playlistId}/tracks/{trackId}")]
         public async Task<IActionResult> RemoveTrack(
             [FromRoute] Guid playlistId,
@@ -84,7 +219,6 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Check if a track exists in a playlist
         [HttpGet("playlists/{playlistId}/tracks/{trackId}/exists")]
         public async Task<IActionResult> TrackExists(
             [FromRoute] Guid playlistId,
@@ -95,20 +229,15 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Update their own playlists based on mood -> if they already have their own playlist based on a mood, they can update it with new tracks from spotify based on the same mood
+        private async Task<List<Track>> GetMoodTracks(Mood mood)
+        {
+            var tracks = await cacheService.GetOrCreateAsync(
+                $"spotify:mood:{mood.Id}",
+                () => spotifyService.GetTracksByMoodRecommendations(
+                    mood.GetSeedGenres(), mood.GetAudioFeatures()),
+                TimeSpan.FromHours(1));
 
-        // Gallery of playlists saved by users -> filter based on moods, users, on self created playlists, etc. and they can  save tracks to their library if they like them (they can choose to create a playlist from multiple tracks or save a single track to their specified playlist) -> this is two endpoints
-
-
-        // Tracks saved to library from gallery of playlists -> if they like a track from a playlist in the gallery, they can save it to their library for easy access later
-        // Existing playlists based on app mood suggestions
-
-
-
-
-
-        // Need a service that resolves userTag to userId
-
-        // Handle self created from frontend by passing the logged in user tag to the query param userTag
+            return tracks ?? [];
+        }
     }
 }

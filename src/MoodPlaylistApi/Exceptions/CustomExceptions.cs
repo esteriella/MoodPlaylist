@@ -24,6 +24,10 @@
     {
     }
 
+    public class RecommendationRequestException(string message) : MoodPlaylistException(message)
+    {
+    }
+
     public class PlaylistCreationException(string message) : MoodPlaylistException(message)
     {
     }

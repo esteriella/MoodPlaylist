@@ -23,28 +23,84 @@ namespace MoodPlaylistApi.Data.Repositories
         public async Task<Mood?> GetByIdAsync(Guid id) =>
             await dc.Moods.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
 
-        public async Task<ApiResponse<List<UserPlaylist>>> GetUserPlaylists(int pageNo = 1, int pageSize = 10, string sortDir = "asc", Guid? userId = null, Guid? moodId = null)
+        public async Task<List<Mood>> GetByIdsAsync(IReadOnlyCollection<Guid> ids) =>
+            await dc.Moods.AsNoTracking().Where(m => ids.Contains(m.Id)).ToListAsync();
+
+        //public async Task<ApiResponse<List<UserPlaylist>>> GetUserPlaylists(int pageNo = 1, int pageSize = 10, string sortDir = "asc", Guid? userId = null, Guid? moodId = null)
+        //{
+        //    var query = dc.Playlists
+        //        .AsNoTracking()
+        //        .AsQueryable();
+
+        //    // Filter by user
+        //    if (userId.HasValue)
+        //        query = query.Where(p => p.UserId == userId.Value);
+
+        //    // Filter by mood
+        //    if (moodId.HasValue)
+        //        query = query.Where(p => p.MoodId == moodId.Value);
+
+        //    if (sortDir == "asc") query = query.OrderBy(p => p.CreatedAt);
+        //    else query = query.OrderByDescending(p => p.CreatedAt);
+
+        //    var userPlaylists = await query
+        //        .Skip((pageNo - 1) * pageSize)
+        //        .Take(pageSize)
+        //        .Select(p => new UserPlaylist
+        //        {
+        //            Title = p.Title,
+        //            CreatorName = p.User.Name,
+        //            CreatorTag = p.User.PublicId,
+        //            Mood = p.Mood != null ? p.Mood.GetAvailableMood() : null,
+        //            Tracks = p.GetTracks()
+        //        })
+        //        .ToListAsync();
+
+        //    return ApiResponse<UserPlaylist>.SuccessList(HttpStatusCode.OK, userPlaylists);
+        //}
+
+        // Get playlists (user-specific or public)
+        public async Task<ApiResponse<List<UserPlaylist>>> GetPlaylists(
+            int pageNo,
+            int pageSize,
+            string sortDir,
+            Guid? ownerId,
+            Guid? excludedOwnerId,
+            Guid? moodId,
+            string? creatorTag)
         {
             var query = dc.Playlists
                 .AsNoTracking()
+                .Include(p => p.User)
+                .Include(p => p.Mood)
                 .AsQueryable();
 
             // Filter by user
-            if (userId.HasValue)
-                query = query.Where(p => p.UserId == userId.Value);
+            if (ownerId.HasValue)
+                query = query.Where(p => p.UserId == ownerId.Value);
+
+            if (excludedOwnerId.HasValue)
+                query = query.Where(p => p.UserId != excludedOwnerId.Value);
+
+            if (!string.IsNullOrWhiteSpace(creatorTag))
+                query = query.Where(p => p.User.PublicId == creatorTag);
 
             // Filter by mood
             if (moodId.HasValue)
                 query = query.Where(p => p.MoodId == moodId.Value);
 
-            if (sortDir == "asc") query = query.OrderBy(p => p.CreatedAt);
-            else query = query.OrderByDescending(p => p.CreatedAt);
-             
+            // Sorting
+            query = sortDir.Equals("asc", StringComparison.OrdinalIgnoreCase)
+                ? query.OrderBy(p => p.CreatedAt)
+                : query.OrderByDescending(p => p.CreatedAt);
+
+            // Pagination + projection
             var userPlaylists = await query
                 .Skip((pageNo - 1) * pageSize)
                 .Take(pageSize)
                 .Select(p => new UserPlaylist
                 {
+                    Id = p.Id,
                     Title = p.Title,
                     CreatorName = p.User.Name,
                     CreatorTag = p.User.PublicId,
@@ -55,6 +111,13 @@ namespace MoodPlaylistApi.Data.Repositories
 
             return ApiResponse<UserPlaylist>.SuccessList(HttpStatusCode.OK, userPlaylists);
         }
+
+        public async Task<Guid?> GetOwnedPlaylistMoodId(Guid userId, Guid playlistId) =>
+            await dc.Playlists
+                .AsNoTracking()
+                .Where(p => p.Id == playlistId && p.UserId == userId)
+                .Select(p => p.MoodId)
+                .FirstOrDefaultAsync();
 
         public async Task<ApiResponse<UserPlaylist>> CreatePlaylist(Guid userId, UpsertPlaylist req)
         {
@@ -79,6 +142,7 @@ namespace MoodPlaylistApi.Data.Repositories
 
             return ApiResponse<UserPlaylist>.Success(HttpStatusCode.OK, data: new()
             {
+                Id = created!.Id,
                 Title = created!.Title,
                 CreatorName = created.User.Name,
                 CreatorTag = created.User.PublicId,
@@ -152,6 +216,7 @@ namespace MoodPlaylistApi.Data.Repositories
 
             return ApiResponse<UserPlaylist>.Success(HttpStatusCode.OK, "Playlist updated successfully.", new UserPlaylist
             {
+                Id = updated.Id,
                 Title = updated.Title,
                 CreatorName = updated.User?.Name ?? string.Empty,
                 CreatorTag = updated.User?.PublicId ?? string.Empty,
@@ -238,31 +303,33 @@ namespace MoodPlaylistApi.Data.Repositories
             });
         }*/
 
-        public async Task<ApiResponse<Track>> AddTrackAsync(Guid userId, Guid playlistId, Track track)
+        public async Task<ApiResponse<List<Track>>> AddTracksAsync(
+            Guid userId,
+            Guid playlistId,
+            IReadOnlyCollection<Track> tracks)
         {
-            // 1. Ownership check
-            var ownsPlaylist = await dc.Playlists
-                .AnyAsync(p => p.Id == playlistId && p.UserId == userId);
+            var playlist = await dc.Playlists.FirstOrDefaultAsync(
+                p => p.Id == playlistId && p.UserId == userId);
+            if (playlist is null)
+                return ApiResponse<List<Track>>.Error(HttpStatusCode.NotFound, "Playlist was not found in your library.");
 
-            if (!ownsPlaylist)
-                return ApiResponse<Track>.Error(HttpStatusCode.Forbidden, "You do not own this playlist.");
+            var existingTracks = playlist.GetTracks();
+            var existingIds = existingTracks.Select(track => track.Id).ToHashSet(StringComparer.Ordinal);
+            var addedTracks = tracks
+                .Where(track => !string.IsNullOrWhiteSpace(track.Id) && existingIds.Add(track.Id))
+                .ToList();
 
-            // 2. Check if track already exists using JSON contains
-            bool exists = await dc.Playlists
-                .AnyAsync(p => p.Id == playlistId &&
-                               EF.Functions.JsonContains(p.Tracks, JsonSerializer.Serialize(new { Id = track.Id })));
+            if (addedTracks.Count == 0)
+                return ApiResponse<List<Track>>.Error(HttpStatusCode.Conflict, "All selected tracks are already in this playlist.");
 
-            if (exists)
-                return ApiResponse<Track>.Error(HttpStatusCode.Conflict, "Track already exists in playlist.");
+            existingTracks.AddRange(addedTracks);
+            playlist.Tracks = PlaylistExtensions.SetTracks(existingTracks);
+            await dc.SaveChangesAsync();
 
-            // 3. Append track JSON directly in Postgres (use async API)
-            await dc.Database.ExecuteSqlInterpolatedAsync($@"
-                UPDATE ""Playlists""
-                SET ""Tracks"" = ""Tracks"" || {JsonSerializer.Serialize(track)}::jsonb
-                WHERE ""Id"" = {playlistId} AND ""UserId"" = {userId};
-            ");
-
-            return ApiResponse<Track>.Success(HttpStatusCode.OK, "Track added successfully.", track);
+            return ApiResponse<List<Track>>.Success(
+                HttpStatusCode.OK,
+                $"Added {addedTracks.Count} track(s).",
+                addedTracks);
         }
 
         //public async Task<ApiResponse<Track>> AddTrackAsync(Guid userId, Guid playlistId, Track track)

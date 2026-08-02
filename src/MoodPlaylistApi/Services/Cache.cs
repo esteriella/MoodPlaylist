@@ -12,7 +12,7 @@ namespace MoodPlaylistApi.Services
     {
         public async Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan ttl)
         {
-            if (cache.TryGetValue(key, out T cached))
+            if (cache.TryGetValue(key, out T? cached) && cached is not null)
                 return cached;
 
             var result = await factory();

@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="MoodPlaylistApi/MoodPlaylistApi.csproj" />
+  <Project Path="MoodPlaylistApi.Tests/MoodPlaylistApi.Tests.csproj" />
 </Solution>

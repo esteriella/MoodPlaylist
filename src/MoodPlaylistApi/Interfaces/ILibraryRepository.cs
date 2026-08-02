@@ -8,10 +8,19 @@ namespace MoodPlaylistApi.Interfaces
     {
         Task<ApiResponse<List<AvailableMood>>> GetAvailableMoods();
         Task<Mood?> GetByIdAsync(Guid id);
-        Task<ApiResponse<List<UserPlaylist>>> GetUserPlaylists(int pageNo = 1, int pageSize = 10, string sortDir = "asc", Guid? userId = null, Guid? moodId = null);
+        Task<List<Mood>> GetByIdsAsync(IReadOnlyCollection<Guid> ids);
+        Task<ApiResponse<List<UserPlaylist>>> GetPlaylists(
+            int pageNo,
+            int pageSize,
+            string sortDir,
+            Guid? ownerId,
+            Guid? excludedOwnerId,
+            Guid? moodId,
+            string? creatorTag);
+        Task<Guid?> GetOwnedPlaylistMoodId(Guid userId, Guid playlistId);
         Task<ApiResponse<UserPlaylist>> CreatePlaylist(Guid userId, UpsertPlaylist req);
         Task<ApiResponse<UserPlaylist>> UpdatePlaylist(Guid userId, Guid playlistId, UpsertPlaylist req);
-        Task<ApiResponse<Track>> AddTrackAsync(Guid userId, Guid playlistId, Track track);
+        Task<ApiResponse<List<Track>>> AddTracksAsync(Guid userId, Guid playlistId, IReadOnlyCollection<Track> tracks);
         Task<ApiResponse<string>> RemoveTrack(Guid userId, Guid playlistId, string trackId);
 
         // Optional: check if track already exists in user’s library
