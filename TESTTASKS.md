@@ -99,10 +99,21 @@ This file is the verification gate for the API test work. A task is only marked 
 - [x] Rebuild in Release and run all 72 non-integration tests successfully.
 - [ ] Confirm all nine integration tests pass on the next Docker-backed GitHub run.
 
+## Spotify Playback Audit — 2026-08-03
+
+- [x] Add official Spotify embed and external web-player links to serialized track responses.
+- [x] Escape unexpected track-ID path characters before constructing playback URLs.
+- [x] Test the public playback JSON contract and URL escaping at the DTO boundary.
+- [x] Add frontend component tests for iframe rendering, external fallback, close behavior, and the empty state.
+- [x] Re-run the deterministic local suites.
+  - Verification: 74 non-integration API tests pass.
+  - Verification: 22 frontend tests pass across five Vitest files.
+  - Integration status: all nine Docker-backed tests remain gated in GitHub Actions; Docker is unavailable on the current development machine.
+
 ## Findings
 
 - The working tree already contains an unrelated change in `src/MoodPlaylistWeb/app/dashboard/page.tsx`; test work must not alter it.
 - A repository-wide `git diff --check` still reports trailing whitespace in that pre-existing frontend change; the test-work paths pass the whitespace check.
 - Live Spotify connectivity belongs in an explicitly configured integration/smoke test, not the deterministic default suite. The initial suite verifies the configured HTTP contract and expected responses using an in-memory handler.
-- The completed suite contains 72 passing tests after the upper-layer audit.
+- The completed deterministic API suite contains 74 passing tests after the playback audit, plus nine Docker-backed integration tests.
 - Restore/build reports NU1903 for the API's transitive `Microsoft.OpenApi` 2.4.1 dependency. This pre-existing production dependency warning is not suppressed or changed as part of test work.

@@ -16,6 +16,10 @@ export interface Track {
   type: string;
   uri: string;
   isLocal: boolean;
+  playback: {
+    embedUrl: string;
+    externalUrl: string;
+  };
 }
 
 export interface Playlist {

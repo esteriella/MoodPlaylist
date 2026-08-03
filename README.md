@@ -7,6 +7,7 @@ The project demonstrates end-to-end product engineering across a typed React int
 ## Highlights
 
 - Mood-driven music discovery backed by Spotify catalog search
+- In-app listening through Spotify's official responsive Embed player
 - Multi-mood discovery distributed across configured genre searches
 - Spotify track, URL, and URI seed normalization
 - Account registration, login, logout, and JWT-protected operations
@@ -61,6 +62,25 @@ Authenticated users can:
 
 Playlist queries support pagination, sort direction, mood filtering, and creator-tag filtering. Public users may browse `others` or `all`; the `mine` view requires authentication.
 
+### Track playback
+
+Discovered tracks and tracks saved in personal or community playlists include a **Listen** control. It opens one reusable Spotify Embed player without sending Spotify credentials through MoodPlaylist. The API derives the official embed and web-player URLs from each Spotify track ID, so clients do not construct or persist arbitrary playback destinations.
+
+Each serialized track includes a computed playback contract:
+
+```json
+{
+  "playback": {
+    "embedUrl": "https://open.spotify.com/embed/track/{trackId}?utm_source=generator&theme=0",
+    "externalUrl": "https://open.spotify.com/track/{trackId}"
+  }
+}
+```
+
+The Embed keeps Spotify's own controls and requests encrypted-media browser support. Listeners can also open the track directly in Spotify. Spotify decides whether a listener receives full playback or a shorter preview based on account status, browser support, region, and sign-in state. MoodPlaylist does not download, proxy, modify, or store Spotify audio.
+
+Playback and playlist selection use separate labelled controls. The same player can be opened from discovery results, personal playlists, and community playlists; it renders nothing until a track is selected and can be dismissed without changing saved or selected tracks. Track IDs are URL-escaped server-side before playback URLs are serialized.
+
 ### Reliability and security
 
 - JWT bearer validation protects library mutations and user-specific reads.
@@ -92,6 +112,8 @@ ASP.NET Core API
   +----> PostgreSQL (users, moods, playlists, tracks)
   |
   +----> Spotify Web API (track lookup and catalog search)
+  |
+  `----> Spotify Embed (browser-controlled playback)
 ```
 
 The API follows dependency-injection and repository/unit-of-work patterns. Controllers depend on interfaces rather than concrete storage implementations, which allows controller behavior to be tested without a live database. The Spotify service is isolated behind `ISpotifyService` and a typed `HttpClient`, making its outbound contract deterministic in tests.
@@ -270,7 +292,7 @@ dotnet test src/MoodPlaylist.slnx --collect:"XPlat Code Coverage"
 
 The backend suite uses xUnit, Moq, WebApplicationFactory, and Testcontainers. Unit tests cover controller contracts, authentication result forwarding, discovery validation and track normalization, playlist query modes and mutations, cache behavior, JWT creation/configuration, exception mapping, request logging, Spotify token acquisition/caching, paginated genre/artist search, response parsing, and typed `HttpClient` registration. Spotify tests use recording in-memory HTTP handlers, so they need neither network access nor live credentials.
 
-The latest documented audit records 72 passing non-integration tests plus nine PostgreSQL integration tests. The integration suite applies real EF Core migrations to a disposable PostgreSQL 17 container and exercises repositories, JSONB track persistence, authentication middleware, and complete HTTP registration/login flows. Docker is required to execute these tests. The nine integration tests are discovered locally and are configured to execute on GitHub's Ubuntu runners; they have not been executed on the current development machine because Docker is unavailable there. See `TESTTASKS.md` and `TESTDECISIONS.md` for the verification record and rationale.
+The latest verified run records 74 passing non-integration tests plus nine PostgreSQL integration tests. DTO coverage verifies that track responses contain official Spotify playback URLs and that unexpected track-ID path characters are escaped. The integration suite applies real EF Core migrations to a disposable PostgreSQL 17 container and exercises repositories, JSONB track persistence, authentication middleware, and complete HTTP registration/login flows. Docker is required to execute these tests. The nine integration tests are discovered locally and are configured to execute on GitHub's Ubuntu runners; they have not been executed on the current development machine because Docker is unavailable there. See `TESTTASKS.md` and `TESTDECISIONS.md` for the broader verification record and rationale.
 
 Run the suites independently when diagnosing failures:
 
@@ -287,7 +309,7 @@ pnpm test
 pnpm test:coverage
 ```
 
-The Vitest suite runs in jsdom with Testing Library and exercises API request construction, error handling, model schemas, and login-page behavior.
+The latest frontend run records 22 passing tests across five Vitest files. The jsdom and Testing Library suite exercises API request construction, error handling, model schemas, login-page behavior, and the Spotify player. Player coverage verifies the official iframe URL, external Spotify fallback, close interaction, and empty state before track selection.
 
 ### Full local quality gate
 
@@ -316,7 +338,7 @@ The backend quality gate expects Docker. If Docker is unavailable locally, run t
 5. Write a pull request that explains the user impact, implementation choices, test evidence, configuration changes, and deployment risk.
 6. Merge only after review and successful checks.
 
-The GitHub Actions definitions include path-filtered deployment workflows and API pull-request validation. Frontend deployment requires dependency installation, linting, tests, and a production build to pass. API pull requests and deployment require restore, Release build, 72 non-integration tests, and nine Docker-backed PostgreSQL integration tests to pass. The local quality gate remains the fastest way to catch failures before pushing.
+The GitHub Actions definitions include path-filtered deployment workflows and API pull-request validation. Frontend deployment requires dependency installation, linting, all 22 frontend tests, and a production build to pass. API pull requests and deployment require restore, Release build, all 74 non-integration tests, and nine Docker-backed PostgreSQL integration tests to pass. The local quality gate remains the fastest way to catch failures before pushing.
 
 ## Deployment workflows
 
@@ -388,6 +410,7 @@ MoodPlaylist is currently a development and portfolio application, not a product
 | CORS origins are hard-coded and HTTP methods are broadly listed. | Deployment-specific policy embedded in code is easy to misconfigure and difficult to audit across environments. | Bind an allowlist from validated configuration, keep credentials restricted to trusted origins, and allow only required headers and methods. CORS is not an authorization mechanism. |
 | Development tracing and rolling file logs are enabled by environment rules. | Authentication headers, tokens, passwords, reset links, or personal data can leak if request logging is expanded without redaction. Container-local files are also not durable observability storage. | Centralize structured logs, redact security headers and sensitive properties, apply retention/access controls, record auditable security events, and never log raw credentials or recovery tokens. |
 | Spotify client credentials are held in application configuration. | Client credentials grant application-level access and become sensitive production secrets even though access-token acquisition and renewal are automated. | Store credentials in a managed secret service, restrict operator access, rotate them, monitor token failures, and keep them out of logs, images, workflow output, and client-side bundles. |
+| Playback uses a third-party Spotify iframe. | The browser connects directly to Spotify, which may receive browser metadata and use cookies under Spotify's policies. Playback availability also varies by account and region. | Disclose the third-party embed in the privacy notice, obtain consent where required, restrict `frame-src` with Content Security Policy, keep the external-link fallback, and never treat iframe state as proof that a user listened. |
 | Dependency restore currently reports a high-severity advisory for a transitive `Microsoft.OpenApi` version. | Shipping known vulnerable dependencies increases supply-chain risk even when the vulnerable path is not obviously exercised. | Upgrade or override the dependency after compatibility testing, enable automated dependency updates, run `dotnet list package --vulnerable --include-transitive`, and make high-severity findings a reviewed CI gate. |
 
 Additional production controls should include TLS at every public boundary, HSTS verification behind the chosen proxy, secret rotation, encrypted managed database backups, least-privilege database credentials, data-retention/deletion policies, security headers, request-size limits, dependency and container scanning, and an incident-response process.
