@@ -7,6 +7,7 @@ import { libraryApi } from "@/app/api/library";
 import { useAuth } from "@/app/context/AuthContext";
 import { Mood, Playlist, Track } from "@/app/models/library.models";
 import { MenuIcon } from "@/app/components/Icons";
+import SpotifyPlayer from "@/app/components/SpotifyPlayer";
 
 const initials = (value: string) =>
   value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [playingTrack, setPlayingTrack] = useState<Track>();
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -225,13 +227,14 @@ export default function DashboardPage() {
                   {recommendations.map((track, index) => {
                     const selected = selectedTrackIds.includes(track.id);
                     return (
-                      <button key={track.id} className={`track-row ${selected ? "selected" : ""}`} onClick={() => setSelectedTrackIds((current) => selected ? current.filter((id) => id !== track.id) : [...current, track.id])}>
+                      <div key={track.id} className={`track-row ${selected ? "selected" : ""}`}>
                         <span className="track-number">{String(index + 1).padStart(2, "0")}</span>
                         <span className="track-art">{track.name.slice(0, 1).toUpperCase()}</span>
-                        <span className="track-copy"><strong>{track.name}</strong><small>Spotify recommendation</small></span>
+                        <span className="track-copy"><strong>{track.name}</strong><small>Discovered on Spotify</small></span>
                         <span className="popularity">{track.popularity ? `${track.popularity}% match` : "Fresh pick"}</span>
-                        <span className="select-mark">{selected ? "✓" : "+"}</span>
-                      </button>
+                        <button type="button" className="track-play-button" onClick={() => setPlayingTrack(track)} aria-label={`Listen to ${track.name}`}>▶</button>
+                        <button type="button" className="select-mark" onClick={() => setSelectedTrackIds((current) => selected ? current.filter((id) => id !== track.id) : [...current, track.id])} aria-label={selected ? `Remove ${track.name} from selection` : `Select ${track.name}`}>{selected ? "✓" : "+"}</button>
+                      </div>
                     );
                   })}
                 </div>
@@ -254,24 +257,26 @@ export default function DashboardPage() {
           )}
 
           {activeTab === "library" && (
-            <PlaylistCollection title="My playlists" subtitle="Everything you’ve saved, ready for another listen." playlists={myPlaylists} actionLabel="Refresh mix" onAction={refreshPlaylist} busy={busy} />
+            <PlaylistCollection title="My playlists" subtitle="Everything you’ve saved, ready for another listen." playlists={myPlaylists} actionLabel="Refresh mix" onAction={refreshPlaylist} onPlay={setPlayingTrack} busy={busy} />
           )}
 
           {activeTab === "discover" && (
-            <PlaylistCollection title="Made by the community" subtitle="Explore mood-led playlists from other listeners." playlists={communityPlaylists} />
+            <PlaylistCollection title="Made by the community" subtitle="Explore mood-led playlists from other listeners." playlists={communityPlaylists} onPlay={setPlayingTrack} />
           )}
         </section>
       </div>
+      <SpotifyPlayer track={playingTrack} onClose={() => setPlayingTrack(undefined)} />
     </main>
   );
 }
 
-function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction, busy }: {
+function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction, onPlay, busy }: {
   title: string;
   subtitle: string;
   playlists: Playlist[];
   actionLabel?: string;
   onAction?: (id: string) => void;
+  onPlay: (track: Track) => void;
   busy?: boolean;
 }) {
   return (
@@ -282,6 +287,15 @@ function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction,
           <article className="playlist-card" key={playlist.id}>
             <div className={`playlist-cover cover-${index % 4}`}><span>{playlist.mood?.emoji || "♫"}</span><i /></div>
             <div className="playlist-card-copy"><p>{playlist.mood?.name || "Mixed mood"}</p><h3>{playlist.title}</h3><small>{trackCount(playlist)} tracks · {playlist.creatorName}</small></div>
+            {playlist.tracks.length > 0 && (
+              <div className="playlist-track-list">
+                {playlist.tracks.map((track, trackIndex) => (
+                  <button type="button" key={track.id} onClick={() => onPlay(track)} aria-label={`Listen to ${track.name}`}>
+                    <span>{String(trackIndex + 1).padStart(2, "0")}</span><strong>{track.name}</strong><i>▶</i>
+                  </button>
+                ))}
+              </div>
+            )}
             {actionLabel && playlist.mood && <button disabled={busy} onClick={() => onAction?.(playlist.id)}>{actionLabel}</button>}
           </article>
         ))}

@@ -22,6 +22,13 @@ namespace MoodPlaylistApi.Dtos
         public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>Official Spotify destinations used to listen to a track.</summary>
+    public sealed record TrackPlayback
+    {
+        public required string EmbedUrl { get; init; }
+        public required string ExternalUrl { get; init; }
+    }
+
     public sealed record Track
     {
         /// <summary>Spotify API URL for this track.</summary>
@@ -54,6 +61,13 @@ namespace MoodPlaylistApi.Dtos
         public bool IsLocal { get; set; } = false;
         [JsonPropertyName("artists")]
         public List<SpotifyArtist> Artists { get; set; } = [];
+
+        /// <summary>Spotify embed and web-player links derived from the track ID.</summary>
+        public TrackPlayback Playback => new()
+        {
+            EmbedUrl = $"https://open.spotify.com/embed/track/{System.Uri.EscapeDataString(Id)}?utm_source=generator&theme=0",
+            ExternalUrl = $"https://open.spotify.com/track/{System.Uri.EscapeDataString(Id)}"
+        };
     }
 
     //public sealed record TrackDetail

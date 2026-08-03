@@ -149,7 +149,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .empty-icon { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; color: #8054dc; background: #eee6ff; font-size: 25px; transform: rotate(-5deg); }
 
 .track-list { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.7); box-shadow: 0 18px 55px rgba(44,30,55,.05); }
-.track-row { display: grid; grid-template-columns: 34px 44px minmax(180px, 1fr) 110px 30px; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); background: transparent; text-align: left; transition: background .18s; }
+.track-row { display: grid; grid-template-columns: 34px 44px minmax(180px, 1fr) 110px 34px 30px; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); background: transparent; text-align: left; transition: background .18s; }
 .track-row:last-child { border-bottom: 0; }
 .track-row:hover, .track-row.selected { background: #f4efff; }
 .track-number { color: #aaa4ad; font: 11px monospace; }
@@ -157,7 +157,9 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .track-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .track-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .track-copy small, .popularity { color: var(--muted); font-size: 11px; }
-.select-mark { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 50%; color: #8e8791; }
+.select-mark, .track-play-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 50%; color: #8e8791; background: white; }
+.track-play-button { border-color: #ddcff5; color: #7447ca; background: #f1eaff; font-size: 10px; }
+.track-play-button:hover { color: white; background: #7447ca; }
 .track-row.selected .select-mark { border-color: #8054dc; color: white; background: #8054dc; }
 
 .save-bar { position: sticky; bottom: 18px; display: grid; grid-template-columns: minmax(120px, 1fr) minmax(150px, 1fr) auto auto minmax(140px, .8fr) auto; align-items: center; gap: 10px; margin-top: 18px; padding: 12px; border: 1px solid rgba(45,32,58,.13); border-radius: 16px; color: white; background: rgba(30,25,38,.94); box-shadow: 0 18px 50px rgba(24,18,32,.24); backdrop-filter: blur(16px); }
@@ -182,6 +184,24 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .playlist-card-copy h3 { margin: 0 0 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: Georgia, serif; font-size: 19px; font-weight: 500; }
 .playlist-card-copy small { color: var(--muted); font-size: 11px; }
 .playlist-card > button { width: calc(100% - 34px); margin: 0 17px 17px; padding: 9px; border: 1px solid #dcd2ec; border-radius: 10px; color: #7048bf; background: #f3edff; font-size: 11px; font-weight: 800; }
+.playlist-track-list { max-height: 210px; margin: 0 17px 15px; overflow-y: auto; border-top: 1px solid var(--line); }
+.playlist-track-list button { display: grid; grid-template-columns: 24px minmax(0, 1fr) 24px; align-items: center; gap: 7px; width: 100%; padding: 9px 2px; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); background: transparent; text-align: left; }
+.playlist-track-list button:last-child { border-bottom: 0; }
+.playlist-track-list button:hover { color: #7048bf; }
+.playlist-track-list span { color: #aaa3ad; font: 10px monospace; }
+.playlist-track-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.playlist-track-list i { color: #7548ca; font-style: normal; font-size: 9px; }
+
+.spotify-player { position: fixed; z-index: 30; right: 24px; bottom: 24px; width: min(430px, calc(100vw - 32px)); padding: 13px; border: 1px solid rgba(255,255,255,.13); border-radius: 20px; color: white; background: rgba(28,22,35,.97); box-shadow: 0 24px 70px rgba(20,14,27,.36); backdrop-filter: blur(20px); }
+.spotify-player-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 3px 11px; }
+.spotify-player-heading > div:first-child { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.spotify-player-heading span { color: #c9aef4; font-size: 9px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+.spotify-player-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.spotify-player-actions { display: flex; flex-shrink: 0; align-items: center; gap: 7px; }
+.spotify-player-actions a { color: #d7c6f2; font-size: 10px; font-weight: 750; }
+.spotify-player-actions button { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; color: white; background: rgba(255,255,255,.08); font-size: 18px; }
+.spotify-player iframe { display: block; border: 0; border-radius: 12px; }
+.spotify-player > small { display: block; padding: 9px 3px 1px; color: #aaa2af; font-size: 9px; line-height: 1.4; }
 
 .loader-orbit { width: 42px; height: 42px; border: 3px solid #ded5ec; border-top-color: #794cd3; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -214,9 +234,10 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .side-panel h1 { max-width: 330px; font-size: 34px; }
   .mood-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-panel { padding: 32px 18px 100px; }
-  .track-row { grid-template-columns: 28px 40px minmax(0, 1fr) 28px; }
+  .track-row { grid-template-columns: 28px 40px minmax(0, 1fr) 30px 28px; padding-inline: 11px; gap: 8px; }
   .popularity { display: none; }
   .save-bar { grid-template-columns: 1fr auto; bottom: 76px; }
   .save-bar input, .save-bar .secondary-button, .save-divider { display: none; }
   .playlist-grid { grid-template-columns: 1fr; }
+  .spotify-player { right: 16px; bottom: 16px; }
 }
