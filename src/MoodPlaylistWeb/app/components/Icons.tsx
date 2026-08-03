@@ -30,3 +30,13 @@ export const LockCheckIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 15l2 2 4-4" />
   </svg>
 );
+
+export const MenuIcon = ({ open = false }: { open?: boolean }) => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    {open ? (
+      <><path d="M6 6l12 12" /><path d="M18 6L6 18" /></>
+    ) : (
+      <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>
+    )}
+  </svg>
+);

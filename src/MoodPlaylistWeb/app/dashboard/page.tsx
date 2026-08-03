@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { libraryApi } from "@/app/api/library";
 import { useAuth } from "@/app/context/AuthContext";
 import { Mood, Playlist, Track } from "@/app/models/library.models";
+import { MenuIcon } from "@/app/components/Icons";
 
 const initials = (value: string) =>
   value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"create" | "library" | "discover">("create");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -141,7 +143,7 @@ export default function DashboardPage() {
         </button>
         <nav className="dashboard-nav" aria-label="Dashboard sections">
           {(["create", "library", "discover"] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={activeTab === tab ? "active" : ""}>
+            <button key={tab} onClick={() => { setActiveTab(tab); setMobileMenuOpen(false); }} className={activeTab === tab ? "active" : ""}>
               {tab === "create" ? "Find music" : tab === "library" ? "My playlists" : "Discover"}
             </button>
           ))}
@@ -151,6 +153,32 @@ export default function DashboardPage() {
           <div><strong>{name}</strong><small>Your music space</small></div>
           <button className="quiet-button" onClick={logout}>Sign out</button>
         </div>
+        <button
+          type="button"
+          className="dashboard-menu-toggle"
+          aria-label={mobileMenuOpen ? "Close dashboard menu" : "Open dashboard menu"}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="dashboard-mobile-menu"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          <MenuIcon open={mobileMenuOpen} />
+        </button>
+        {mobileMenuOpen && (
+          <div id="dashboard-mobile-menu" className="dashboard-mobile-menu">
+            <div className="dashboard-mobile-profile">
+              <span className="profile-avatar">{initials(name ?? "MP")}</span>
+              <div><strong>{name}</strong><small>Your music space</small></div>
+            </div>
+            <nav aria-label="Mobile dashboard sections">
+              {(["create", "library", "discover"] as const).map((tab) => (
+                <button key={tab} onClick={() => { setActiveTab(tab); setMobileMenuOpen(false); }} className={activeTab === tab ? "active" : ""}>
+                  {tab === "create" ? "Find music" : tab === "library" ? "My playlists" : "Discover"}
+                </button>
+              ))}
+            </nav>
+            <button className="dashboard-mobile-signout" onClick={logout}>Sign out</button>
+          </div>
+        )}
       </header>
 
       <div className="dashboard-layout">
