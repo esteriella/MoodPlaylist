@@ -58,6 +58,20 @@ namespace MoodPlaylistApi.Controllers
             return StatusCode((int)result.StatusCode, result);
         }
 
+        /// <summary>Renew an expired MoodPlaylist access token.</summary>
+        /// <param name="dto">The current refresh token.</param>
+        /// <response code="200">A fresh access token and rotated refresh token.</response>
+        /// <response code="401">The refresh token is missing, invalid, expired, or already replaced.</response>
+        [AllowAnonymous]
+        [HttpPost("refresh", Name = "RefreshSession")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto dto)
+        {
+            var result = await uow.AuthRepository.RefreshAsync(dto.RefreshToken);
+            return StatusCode((int)result.StatusCode, result);
+        }
+
         /// <summary>Sign out and revoke the current refresh token.</summary>
         /// <response code="200">The session was ended.</response>
         /// <response code="401">A valid JWT was not supplied.</response>

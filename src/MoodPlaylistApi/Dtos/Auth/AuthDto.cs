@@ -44,4 +44,10 @@ namespace MoodPlaylistApi.Dtos.Auth
         public string RefreshToken { get; init; } = string.Empty;
     }
 
+    public sealed record RefreshTokenDto
+    {
+        /// <summary>The refresh token returned by registration, login, or the previous refresh.</summary>
+        public required string RefreshToken { get; init; }
+    }
+
 }

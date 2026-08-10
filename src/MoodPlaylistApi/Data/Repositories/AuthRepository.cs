@@ -98,6 +98,29 @@ namespace MoodPlaylistApi.Data.Repositories
             return ApiResponse<string>.Success(HttpStatusCode.OK, "User logged out successfully.");
         }
 
+        public async Task<ApiResponse<LoginResponseDto>> RefreshAsync(string refreshToken)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return ApiResponse<LoginResponseDto>.Error(HttpStatusCode.Unauthorized, "Your session has expired. Please sign in again.");
+
+            var user = await dc.Users.FirstOrDefaultAsync(candidate => candidate.RefreshToken == refreshToken);
+            if (user is null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+                return ApiResponse<LoginResponseDto>.Error(HttpStatusCode.Unauthorized, "Your session has expired. Please sign in again.");
+
+            var (newRefreshToken, refreshTokenExpiry) = Jwt.GenerateRefreshToken();
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiryTime = refreshTokenExpiry;
+            await dc.SaveChangesAsync();
+
+            return ApiResponse<LoginResponseDto>.Success(HttpStatusCode.OK, data: new LoginResponseDto
+            {
+                Name = user.Name,
+                Tag = user.PublicId,
+                Token = Jwt.CreateToken(user),
+                RefreshToken = newRefreshToken
+            });
+        }
+
         private static string HashString(string rawKey)
         {
             var secret = Encoding.UTF8.GetBytes(HashHelperSettings.SecretKey);

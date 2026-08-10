@@ -42,7 +42,7 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(loginUser).toHaveBeenCalledWith({ email: "ada@example.com", password: "Strong1!" });
-    expect(login).toHaveBeenCalledWith("token-123", "Ada");
+    expect(login).toHaveBeenCalledWith("token-123", "Ada", "refresh");
   });
 
   it("displays an API error", async () => {

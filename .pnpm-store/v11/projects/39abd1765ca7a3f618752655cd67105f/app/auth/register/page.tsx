@@ -26,7 +26,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const response = await registerUser(checked.data);
-      login(response.data.token, response.data.name);
+      login(response.data.token, response.data.name, response.data.refreshToken);
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : "Unable to create your account");
     } finally {

@@ -64,4 +64,24 @@ public sealed class AuthControllerTests
         Assert.Same(response, objectResult.Value);
         repository.Verify(x => x.LogoutAsync(userId), Times.Once);
     }
+
+    [Fact(DisplayName = "Refresh rotates the supplied session through the repository")]
+    public async Task Refresh_ValidRequest_ReturnsFreshTokens()
+    {
+        var request = new RefreshTokenDto { RefreshToken = "current-refresh-token" };
+        var response = ApiResponse<LoginResponseDto>.Success(HttpStatusCode.OK, data: new LoginResponseDto
+        {
+            Token = "new-access-token",
+            RefreshToken = "new-refresh-token"
+        });
+        var repository = new Mock<IAuthRepository>(MockBehavior.Strict);
+        repository.Setup(x => x.RefreshAsync(request.RefreshToken)).ReturnsAsync(response);
+        var controller = new AuthController(ControllerTestContext.CreateUnitOfWork(authRepository: repository).Object);
+
+        var result = await controller.Refresh(request);
+
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status200OK, objectResult.StatusCode);
+        Assert.Same(response, objectResult.Value);
+    }
 }

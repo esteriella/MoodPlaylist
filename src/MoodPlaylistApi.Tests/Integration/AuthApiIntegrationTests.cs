@@ -41,6 +41,17 @@ public sealed class AuthApiIntegrationTests(PostgreSqlFixture database)
         Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(
             loginBody.RootElement.GetProperty("data").GetProperty("refreshToken").GetString()));
+
+        var firstRefreshToken = loginBody.RootElement.GetProperty("data").GetProperty("refreshToken").GetString();
+        var refreshResponse = await client.PostAsJsonAsync("/auth/refresh", new RefreshTokenDto
+        {
+            RefreshToken = firstRefreshToken!
+        });
+        using var refreshBody = JsonDocument.Parse(await refreshResponse.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+        Assert.NotEqual(firstRefreshToken,
+            refreshBody.RootElement.GetProperty("data").GetProperty("refreshToken").GetString());
     }
 
     [Fact(DisplayName = "Register endpoint applies API model validation before accessing PostgreSQL")]

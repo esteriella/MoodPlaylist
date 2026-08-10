@@ -1,6 +1,11 @@
 import toast from "react-hot-toast";
 
-export async function apiRequest<T>(url: string, options: RequestInit, logout: () => void): Promise<T> {
+export async function apiRequest<T>(
+  url: string,
+  options: RequestInit,
+  logout: () => void,
+  refreshAccessToken?: () => Promise<string | null>,
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, options);
@@ -26,6 +31,20 @@ export async function apiRequest<T>(url: string, options: RequestInit, logout: (
 
   // Handle status codes
   if (!res.ok) {
+    if (res.status === 401 && refreshAccessToken) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        const headers = new Headers(options.headers);
+        headers.set("Authorization", `Bearer ${newToken}`);
+        return apiRequest<T>(url, { ...options, headers }, logout);
+      }
+
+      const sessionMessage = "Your session has expired. Please sign in again.";
+      logout();
+      toast.error(sessionMessage);
+      throw new Error(sessionMessage);
+    }
+
     const message = data?.message || `Request failed with status ${res.status}`;
     if (res.status === 401) logout();
     toast.error(message);
