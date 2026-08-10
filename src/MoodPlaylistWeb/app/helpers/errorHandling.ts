@@ -9,12 +9,19 @@ export async function apiRequest<T>(url: string, options: RequestInit, logout: (
     throw new Error("Network error");
   }
 
-  let data: { message?: string };
+  const responseText = await res.text();
+  let data: { message?: string } | undefined;
   try {
-    data = await res.json();
+    data = responseText ? JSON.parse(responseText) as { message?: string } : undefined;
   } catch {
-    toast.error("Server did not return JSON");
-    throw new Error("Invalid JSON response");
+    const message = gatewayMessage(res.status);
+    console.error("Unexpected API response", {
+      status: res.status,
+      contentType: res.headers.get("content-type") ?? "unknown",
+      path: safePath(url),
+    });
+    toast.error(message);
+    throw new Error(message);
   }
 
   // Handle status codes
@@ -31,4 +38,22 @@ export async function apiRequest<T>(url: string, options: RequestInit, logout: (
   }
 
   return data as T;
+}
+
+function gatewayMessage(status: number) {
+  if ([502, 503, 504].includes(status))
+    return "The music service took too long to respond. Please try again shortly.";
+  if (status === 404)
+    return "The requested API route is unavailable. Please refresh and try again.";
+  return status >= 500
+    ? "The server could not complete the request. Please try again."
+    : "The server returned an unexpected response. Please try again.";
+}
+
+function safePath(url: string) {
+  try {
+    return new URL(url, window.location.origin).pathname;
+  } catch {
+    return "unknown";
+  }
 }
