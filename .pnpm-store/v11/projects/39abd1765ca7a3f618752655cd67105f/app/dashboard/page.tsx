@@ -83,6 +83,8 @@ export default function DashboardPage() {
       const result = await libraryApi.recommendations(request, selectedMoodIds);
       setRecommendations(result.data ?? []);
       setSelectedTrackIds([]);
+    } catch {
+      // The shared request helper already shows the useful error.
     } finally {
       setBusy(false);
     }
@@ -102,6 +104,8 @@ export default function DashboardPage() {
       setPlaylistTitle("");
       setSelectedTrackIds([]);
       setActiveTab("library");
+    } catch {
+      // The shared request helper already shows the useful error.
     } finally {
       setBusy(false);
     }
@@ -115,6 +119,8 @@ export default function DashboardPage() {
       await libraryApi.saveTracks(request, targetPlaylistId, selectedTracks);
       await loadDashboard();
       setSelectedTrackIds([]);
+    } catch {
+      // The shared request helper already shows the useful error.
     } finally {
       setBusy(false);
     }
@@ -125,6 +131,8 @@ export default function DashboardPage() {
     try {
       await libraryApi.refreshPlaylist(request, playlistId);
       await loadDashboard();
+    } catch {
+      // The shared request helper already shows the useful error.
     } finally {
       setBusy(false);
     }

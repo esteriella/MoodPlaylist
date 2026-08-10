@@ -141,6 +141,26 @@ public sealed class SpotifyServiceTests
             () => service.GetTracksByMoodRecommendations(["unknown"], []));
     }
 
+    [Fact(DisplayName = "Mood discovery requests its genre searches together")]
+    public async Task GetTracksByMoodRecommendations_MultipleGenres_DoesNotWaitForEachSearch()
+    {
+        var inFlight = 0;
+        var highestInFlight = 0;
+        var handler = new AsyncRecordingHttpMessageHandler(async _ =>
+        {
+            var current = Interlocked.Increment(ref inFlight);
+            highestInFlight = Math.Max(highestInFlight, current);
+            await Task.Delay(30);
+            Interlocked.Decrement(ref inFlight);
+            return RecordingHttpMessageHandler.JsonResponse("{\"tracks\":{\"items\":[],\"next\":null}}");
+        });
+        var service = new SpotifyService(new HttpClient(handler) { BaseAddress = new Uri("https://spotify.test/") });
+
+        await service.GetTracksByMoodRecommendations(["pop", "dance", "soul"], []);
+
+        Assert.True(highestInFlight > 1);
+    }
+
     private static SpotifyService CreateService(RecordingHttpMessageHandler handler) =>
         new(new HttpClient(handler) { BaseAddress = new Uri("https://spotify.test/") });
 }

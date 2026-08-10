@@ -83,9 +83,14 @@ namespace MoodPlaylistApi.Services
 
             while (results.Count < limit && activeQueries.Count > 0)
             {
-                foreach (var query in searchQueries.Where(activeQueries.Contains))
+                var queriesThisRound = searchQueries.Where(activeQueries.Contains).ToList();
+                var pages = await Task.WhenAll(queriesThisRound.Select(async query =>
+                    (Query: query, Page: await SearchTracks(query, offsets[query], market))));
+
+                foreach (var resultPage in pages)
                 {
-                    var page = await SearchTracks(query, offsets[query], market);
+                    var query = resultPage.Query;
+                    var page = resultPage.Page;
                     if (page.Items.Count == 0 || string.IsNullOrWhiteSpace(page.Next))
                         activeQueries.Remove(query);
                     else
@@ -131,7 +136,15 @@ namespace MoodPlaylistApi.Services
             if (!string.IsNullOrWhiteSpace(market))
                 queryParams.Add($"market={Uri.EscapeDataString(market.ToUpperInvariant())}");
 
-            var response = await _httpClient.GetAsync($"v1/search?{string.Join("&", queryParams)}");
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.GetAsync($"v1/search?{string.Join("&", queryParams)}");
+            }
+            catch (TaskCanceledException exception)
+            {
+                throw new SpotifyApiException("Spotify recommendation search timed out.", exception);
+            }
             await EnsureSpotifySuccess(response, "recommendation search");
             var content = await response.Content.ReadAsStringAsync();
             var searchResponse = JsonSerializer.Deserialize<SpotifySearchResponse>(content, JsonOptions);

@@ -44,9 +44,22 @@ describe("apiRequest", () => {
   });
 
   it("reports non-JSON responses", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("not json", { status: 200 })));
 
-    await expect(apiRequest("/items", {}, vi.fn())).rejects.toThrow("Invalid JSON response");
-    expect(toast.error).toHaveBeenCalledWith("Server did not return JSON");
+    await expect(apiRequest("/items", {}, vi.fn())).rejects.toThrow("The server returned an unexpected response. Please try again.");
+    expect(toast.error).toHaveBeenCalledWith("The server returned an unexpected response. Please try again.");
+  });
+
+  it("turns an HTML gateway timeout into a useful message", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>Gateway timeout</html>", {
+      status: 504,
+      headers: { "Content-Type": "text/html" },
+    })));
+
+    await expect(apiRequest("/library/recommendations", {}, vi.fn()))
+      .rejects.toThrow("The music service took too long to respond. Please try again shortly.");
+    expect(toast.error).toHaveBeenCalledWith("The music service took too long to respond. Please try again shortly.");
   });
 });
