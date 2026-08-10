@@ -36,6 +36,30 @@ describe("apiRequest", () => {
     expect(toast.error).toHaveBeenCalledWith("Session expired");
   });
 
+  it("refreshes once and retries an expired authenticated request", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: "Expired" }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: ["track"] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const refresh = vi.fn().mockResolvedValue("fresh-token");
+
+    await expect(apiRequest("/recommendations", { headers: { Authorization: "Bearer old-token" } }, vi.fn(), refresh))
+      .resolves.toEqual({ data: ["track"] });
+
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get("Authorization")).toBe("Bearer fresh-token");
+  });
+
+  it("signs out when a session cannot be refreshed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: "Expired" }), { status: 401 })));
+    const logout = vi.fn();
+
+    await expect(apiRequest("/recommendations", {}, logout, vi.fn().mockResolvedValue(null)))
+      .rejects.toThrow("Your session has expired. Please sign in again.");
+
+    expect(logout).toHaveBeenCalledOnce();
+  });
+
   it("reports network failures", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
 
