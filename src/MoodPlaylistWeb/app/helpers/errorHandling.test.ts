@@ -61,10 +61,22 @@ describe("apiRequest", () => {
   });
 
   it("reports network failures", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("offline"));
+    vi.stubGlobal("fetch", fetchMock);
 
     await expect(apiRequest("/items", {}, vi.fn())).rejects.toThrow("Network error");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(toast.error).toHaveBeenCalledWith("Network error: Could not reach server");
+  });
+
+  it("retries a temporary gateway failure before returning recommendations", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("temporarily unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: ["track"] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(apiRequest("/library/recommendations", {}, vi.fn())).resolves.toEqual({ data: ["track"] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("reports non-JSON responses", async () => {

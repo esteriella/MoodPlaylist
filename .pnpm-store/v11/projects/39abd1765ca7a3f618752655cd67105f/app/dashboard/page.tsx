@@ -25,6 +25,9 @@ export default function DashboardPage() {
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [playlistTitle, setPlaylistTitle] = useState("");
   const [targetPlaylistId, setTargetPlaylistId] = useState("");
+  const [discoverTrackIds, setDiscoverTrackIds] = useState<string[]>([]);
+  const [discoverPlaylistTitle, setDiscoverPlaylistTitle] = useState("");
+  const [discoverTargetPlaylistId, setDiscoverTargetPlaylistId] = useState("");
   const [activeTab, setActiveTab] = useState<"create" | "library" | "discover">("create");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ export default function DashboardPage() {
       setCommunityPlaylists(communityResult.data ?? []);
       const requestedMoodId = new URLSearchParams(window.location.search).get("moodId");
       if (requestedMoodId && moodResult.data.some((mood) => mood.id === requestedMoodId))
-        setSelectedMoodIds([requestedMoodId]);
+        setSelectedMoodIds((current) => current.length ? current : [requestedMoodId]);
     } catch {
       // The shared request helper displays the useful message.
     } finally {
@@ -64,6 +67,13 @@ export default function DashboardPage() {
   const selectedTracks = useMemo(
     () => recommendations.filter((track) => selectedTrackIds.includes(track.id)),
     [recommendations, selectedTrackIds],
+  );
+  const communityTracks = useMemo(() => Array.from(new Map(
+    communityPlaylists.flatMap((playlist) => playlist.tracks).map((track) => [track.id, track]),
+  ).values()), [communityPlaylists]);
+  const selectedDiscoverTracks = useMemo(
+    () => communityTracks.filter((track) => discoverTrackIds.includes(track.id)),
+    [communityTracks, discoverTrackIds],
   );
 
   const chooseMood = (moodId: string) => {
@@ -93,6 +103,7 @@ export default function DashboardPage() {
   const createPlaylist = async () => {
     if (!playlistTitle.trim()) return toast.error("Give your playlist a name");
     if (!selectedMoodIds.length) return toast.error("Choose a mood first");
+    if (!selectedTracks.length) return toast.error("Select some tracks first");
     setBusy(true);
     try {
       const result = await libraryApi.createPlaylist(request, {
@@ -104,6 +115,30 @@ export default function DashboardPage() {
       setPlaylistTitle("");
       setSelectedTrackIds([]);
       setActiveTab("library");
+    } catch {
+      // The shared request helper already shows the useful error.
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveDiscoveredTracks = async (createNew: boolean) => {
+    if (!selectedDiscoverTracks.length) return toast.error("Select tracks from Discover first");
+    if (createNew && !discoverPlaylistTitle.trim()) return toast.error("Give your playlist a name");
+    if (!createNew && !discoverTargetPlaylistId) return toast.error("Choose one of your playlists");
+    setBusy(true);
+    try {
+      if (createNew) {
+        const result = await libraryApi.createPlaylist(request, {
+          title: discoverPlaylistTitle.trim(), tracks: JSON.stringify(selectedDiscoverTracks),
+        });
+        setMyPlaylists((current) => [result.data, ...current]);
+        setDiscoverPlaylistTitle("");
+      } else {
+        await libraryApi.saveTracks(request, discoverTargetPlaylistId, selectedDiscoverTracks);
+        await loadDashboard();
+      }
+      setDiscoverTrackIds([]);
     } catch {
       // The shared request helper already shows the useful error.
     } finally {
@@ -196,6 +231,7 @@ export default function DashboardPage() {
           <p className="eyebrow">Mood mixer</p>
           <h1>What does today sound like?</h1>
           <p className="muted">Pick up to five moods. We’ll shape a fresh set of tracks around your mix.</p>
+          <span className="mood-selection-count">{selectedMoodIds.length} of 5 selected</span>
           <div className="mood-list">
             {moods.map((mood) => {
               const selected = selectedMoodIds.includes(mood.id);
@@ -252,13 +288,13 @@ export default function DashboardPage() {
                 <div className="save-bar">
                   <div><strong>{selectedTracks.length} selected</strong><small>Choose where these tracks should live.</small></div>
                   <input value={playlistTitle} onChange={(event) => setPlaylistTitle(event.target.value)} placeholder="New playlist name" />
-                  <button className="secondary-button" disabled={busy} onClick={createPlaylist}>Create playlist</button>
+                  <button className="secondary-button" disabled={busy || !selectedTracks.length} onClick={createPlaylist}>Save tracks</button>
                   <span className="save-divider">or</span>
                   <select value={targetPlaylistId} onChange={(event) => setTargetPlaylistId(event.target.value)}>
                     <option value="">Existing playlist</option>
                     {myPlaylists.map((playlist) => <option key={playlist.id} value={playlist.id}>{playlist.title}</option>)}
                   </select>
-                  <button className="primary-button compact" disabled={busy} onClick={saveToPlaylist}>Save tracks</button>
+                  <button className="primary-button compact" disabled={busy || !selectedTracks.length} onClick={saveToPlaylist}>Find tracks</button>
                 </div>
               )}
             </>
@@ -269,7 +305,19 @@ export default function DashboardPage() {
           )}
 
           {activeTab === "discover" && (
-            <PlaylistCollection title="Made by the community" subtitle="Explore mood-led playlists from other listeners." playlists={communityPlaylists} onPlay={setPlayingTrack} />
+            <>
+              <PlaylistCollection title="Made by the community" subtitle="Listen, select the tracks you like, then save them to your own collection." playlists={communityPlaylists} onPlay={setPlayingTrack} selectedTrackIds={discoverTrackIds} onToggleTrack={(trackId) => setDiscoverTrackIds((current) => current.includes(trackId) ? current.filter((id) => id !== trackId) : [...current, trackId])} />
+              {selectedDiscoverTracks.length > 0 && (
+                <div className="save-bar discover-save-bar">
+                  <div><strong>{selectedDiscoverTracks.length} selected</strong><small>Keep these tracks in your collection.</small></div>
+                  <input value={discoverPlaylistTitle} onChange={(event) => setDiscoverPlaylistTitle(event.target.value)} placeholder="New playlist name" />
+                  <button className="secondary-button" disabled={busy} onClick={() => saveDiscoveredTracks(true)}>Create playlist</button>
+                  <span className="save-divider">or</span>
+                  <select value={discoverTargetPlaylistId} onChange={(event) => setDiscoverTargetPlaylistId(event.target.value)}><option value="">Choose your playlist</option>{myPlaylists.map((playlist) => <option key={playlist.id} value={playlist.id}>{playlist.title}</option>)}</select>
+                  <button className="primary-button compact" disabled={busy} onClick={() => saveDiscoveredTracks(false)}>Add tracks</button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>
@@ -278,7 +326,7 @@ export default function DashboardPage() {
   );
 }
 
-function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction, onPlay, busy }: {
+function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction, onPlay, busy, selectedTrackIds = [], onToggleTrack }: {
   title: string;
   subtitle: string;
   playlists: Playlist[];
@@ -286,6 +334,8 @@ function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction,
   onAction?: (id: string) => void;
   onPlay: (track: Track) => void;
   busy?: boolean;
+  selectedTrackIds?: string[];
+  onToggleTrack?: (trackId: string) => void;
 }) {
   return (
     <>
@@ -297,11 +347,13 @@ function PlaylistCollection({ title, subtitle, playlists, actionLabel, onAction,
             <div className="playlist-card-copy"><p>{playlist.mood?.name || "Mixed mood"}</p><h3>{playlist.title}</h3><small>{trackCount(playlist)} tracks · {playlist.creatorName}</small></div>
             {playlist.tracks.length > 0 && (
               <div className="playlist-track-list">
-                {playlist.tracks.map((track, trackIndex) => (
-                  <button type="button" key={track.id} onClick={() => onPlay(track)} aria-label={`Listen to ${track.name}`}>
-                    <span>{String(trackIndex + 1).padStart(2, "0")}</span><strong>{track.name}</strong><i>▶</i>
-                  </button>
-                ))}
+                {playlist.tracks.map((track, trackIndex) => {
+                  const selected = selectedTrackIds.includes(track.id);
+                  return <div className={`playlist-track-row ${selected ? "selected" : ""}`} key={track.id}>
+                    <button type="button" className="playlist-track-play" onClick={() => onPlay(track)} aria-label={`Listen to ${track.name}`}><span>{String(trackIndex + 1).padStart(2, "0")}</span><strong>{track.name}</strong><i>▶</i></button>
+                    {onToggleTrack && <button type="button" className="playlist-track-select" onClick={() => onToggleTrack(track.id)} aria-label={selected ? `Remove ${track.name} from selection` : `Select ${track.name}`}>{selected ? "✓" : "+"}</button>}
+                  </div>;
+                })}
               </div>
             )}
             {actionLabel && playlist.mood && <button disabled={busy} onClick={() => onAction?.(playlist.id)}>{actionLabel}</button>}
