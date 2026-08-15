@@ -8,7 +8,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url, options);
+    res = await fetchWithRetry(url, options);
   } catch {
     toast.error("Network error: Could not reach server");
     throw new Error("Network error");
@@ -57,6 +57,20 @@ export async function apiRequest<T>(
   }
 
   return data as T;
+}
+
+async function fetchWithRetry(url: string, options: RequestInit) {
+  const attempts = (options.method ?? "GET").toUpperCase() === "GET" ? 3 : 1;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, options);
+      if (![502, 503, 504].includes(response.status) || attempt === attempts) return response;
+    } catch (error) {
+      if (attempt === attempts || options.signal?.aborted) throw error;
+    }
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 500 * attempt));
+  }
+  throw new Error("Network error");
 }
 
 function gatewayMessage(status: number) {
