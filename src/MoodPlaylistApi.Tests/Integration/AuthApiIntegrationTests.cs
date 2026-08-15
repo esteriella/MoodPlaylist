@@ -35,10 +35,12 @@ public sealed class AuthApiIntegrationTests(PostgreSqlFixture database)
         using var loginBody = JsonDocument.Parse(await loginResponse.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.Created, registerResponse.StatusCode);
+        Assert.Equal("User registered successfully.", registerBody.RootElement.GetProperty("message").GetString());
         Assert.Equal("Ada", registerBody.RootElement.GetProperty("data").GetProperty("name").GetString());
         Assert.False(string.IsNullOrWhiteSpace(
             registerBody.RootElement.GetProperty("data").GetProperty("token").GetString()));
-        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        Assert.Equal("User signed in successfully.", loginBody.RootElement.GetProperty("message").GetString());
         Assert.False(string.IsNullOrWhiteSpace(
             loginBody.RootElement.GetProperty("data").GetProperty("refreshToken").GetString()));
 

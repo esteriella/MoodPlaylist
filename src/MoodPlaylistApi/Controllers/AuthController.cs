@@ -46,10 +46,10 @@ namespace MoodPlaylistApi.Controllers
 
         /// <summary>Sign in to MoodPlaylist.</summary>
         /// <param name="dto">The account email and password.</param>
-        /// <response code="201">Credentials were accepted and fresh tokens were issued.</response>
+        /// <response code="200">Credentials were accepted and fresh tokens were issued.</response>
         /// <response code="400">The email or password is incorrect.</response>
         [HttpPost("login", Name = "Login")]
-        [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), StatusCodes.Status201Created, Description = "Signed in successfully.")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), StatusCodes.Status200OK, Description = "Signed in successfully.")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest, Description = "Invalid credentials.")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {

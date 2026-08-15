@@ -118,12 +118,19 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddHttpContextAccessor();
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+if (allowedOrigins.Length == 0)
+    throw new InvalidOperationException("At least one CORS allowed origin must be configured.");
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(
-        builder =>
+        policy =>
         {
-            builder.WithOrigins("http://localhost:3000","https://mood-playlist-five.vercel.app")
+            policy.WithOrigins(allowedOrigins)
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
                 .AllowAnyHeader()
                 .WithMethods("GET", "POST", "PUT", "DELETE")
                 .AllowCredentials();
@@ -195,12 +202,12 @@ app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseApiDocumentation();
 app.UseRateLimiter();
-app.UseCors();
 
 app.UseHsts();
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
