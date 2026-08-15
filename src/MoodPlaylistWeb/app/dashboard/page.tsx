@@ -77,11 +77,14 @@ export default function DashboardPage() {
   );
 
   const chooseMood = (moodId: string) => {
-    setSelectedMoodIds((current) =>
-      current.includes(moodId)
-        ? current.filter((id) => id !== moodId)
-        : current.length < 5 ? [...current, moodId] : current,
-    );
+    if (selectedMoodIds.includes(moodId)) {
+      setSelectedMoodIds([]);
+    } else if (selectedMoodIds.length > 0) {
+      toast.error("You can only select one mood to find sounds");
+      return;
+    } else {
+      setSelectedMoodIds([moodId]);
+    }
     setRecommendations([]);
     setSelectedTrackIds([]);
   };
@@ -230,8 +233,8 @@ export default function DashboardPage() {
         <aside className="side-panel">
           <p className="eyebrow">Mood mixer</p>
           <h1>What does today sound like?</h1>
-          <p className="muted">Pick up to five moods. We’ll shape a fresh set of tracks around your mix.</p>
-          <span className="mood-selection-count">{selectedMoodIds.length} of 5 selected</span>
+          <p className="muted">Choose one mood and we’ll shape a fresh set of tracks around it.</p>
+          <span className="mood-selection-count">{selectedMoodIds.length ? "1 mood selected" : "Choose one mood"}</span>
           <div className="mood-list">
             {moods.map((mood) => {
               const selected = selectedMoodIds.includes(mood.id);

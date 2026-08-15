@@ -1,5 +1,5 @@
 const steps = [
-  { number: "01", title: "Name the feeling", copy: "Choose one mood or blend a few when the day refuses to fit one label.", symbol: "◌" },
+  { number: "01", title: "Name the feeling", copy: "Choose the one mood that best matches how the moment feels.", symbol: "◌" },
   { number: "02", title: "Meet your mix", copy: "Discover fresh Spotify tracks shaped around the energy you picked.", symbol: "♫" },
   { number: "03", title: "Make it yours", copy: "Keep your favourites together, refresh the mix, and come back anytime.", symbol: "♡" },
 ];
