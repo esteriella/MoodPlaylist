@@ -75,7 +75,7 @@ namespace MoodPlaylistApi.Data.Repositories
             await dc.SaveChangesAsync();
             string token = Jwt.CreateToken(user);
 
-            return ApiResponse<LoginResponseDto>.Success(HttpStatusCode.Created, "User registered successfully.", new LoginResponseDto
+            return ApiResponse<LoginResponseDto>.Success(HttpStatusCode.OK, "User signed in successfully.", new LoginResponseDto
             {
                 Name = user.Name,
                 Tag = user.PublicId,

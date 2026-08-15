@@ -33,7 +33,8 @@ public sealed class AuthRepositoryIntegrationTests(PostgreSqlFixture database)
 
         Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(registered.Data?.Token));
-        Assert.Equal(HttpStatusCode.Created, loggedIn.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, loggedIn.StatusCode);
+        Assert.Equal("User signed in successfully.", loggedIn.Message);
         Assert.Equal(HttpStatusCode.OK, loggedOut.StatusCode);
         await context.Entry(user).ReloadAsync();
         Assert.Null(user.RefreshToken);
