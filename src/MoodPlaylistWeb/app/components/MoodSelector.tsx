@@ -33,7 +33,7 @@ export default function MoodSelector() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div><p className="mb-3 text-xs font-black uppercase tracking-[.22em] text-[#8051d0]">Try a feeling</p><h2 className="font-serif text-4xl tracking-tight md:text-5xl">Where are you today?</h2></div>
-          <p className="max-w-md text-sm leading-6 text-[#77707d]">Tap a mood to begin. Once you’re inside, you can mix it with others for something more personal.</p>
+          <p className="max-w-md text-sm leading-6 text-[#77707d]">Tap one mood to begin and find tracks shaped around that feeling.</p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
           {moods.map((mood, index) => (
