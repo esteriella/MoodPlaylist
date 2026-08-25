@@ -364,3 +364,44 @@ MigrationBackup/
 FodyWeavers.xsd
 .vercel/README.md
 .vercel/
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.code-workspace
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+*.pem
+*.key
+
+# Next.js, Node.js, and package-manager output
+**/.next/
+**/out/
+**/dist/
+**/coverage/
+**/.turbo/
+**/.cache/
+*.tsbuildinfo
+.npm/
+.yarn/cache/
+.eslintcache
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test and local runtime artifacts
+*.trx
+*.sqlite
+*.sqlite3
+docker-data/
