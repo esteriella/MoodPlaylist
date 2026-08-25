@@ -284,6 +284,7 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+.pnpm-store/
 
 # Visual Studio 6 build log
 *.plg
@@ -362,3 +363,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 .vercel/README.md
+.vercel/
